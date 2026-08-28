@@ -1,0 +1,166 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2021-09-09/uiFormDefinition.schema.json",
+  "view": {
+    "kind": "Form",
+    "properties": {
+      "title": "Inconsistency Check",
+      "steps": [
+        {
+          "name": "basics",
+          "label": "Basics",
+          "elements": [
+            {
+              "name": "scope",
+              "type": "Microsoft.Common.ResourceScope",
+              "location": {
+                "resourceTypes": [
+                  "Microsoft.CognitiveServices/accounts",
+                  "Microsoft.Web/sites"
+                ],
+                "allowedValues": [
+                  "swedencentral",
+                  "germanywestcentral",
+                  "switzerlandnorth"
+                ]
+              }
+            },
+            {
+              "name": "nameSuffix",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Name suffix",
+              "toolTip": "3-8 lowercase letters/digits, unique in your subscription (e.g. logic1).",
+              "constraints": {
+                "required": true,
+                "regex": "^[a-z0-9]{3,8}$",
+                "validationMessage": "Use 3-8 lowercase letters or digits."
+              }
+            }
+          ]
+        },
+        {
+          "name": "model",
+          "label": "Model",
+          "elements": [
+            {
+              "name": "modelInfo",
+              "type": "Microsoft.Common.InfoBox",
+              "visible": true,
+              "options": {
+                "icon": "Info",
+                "text": "Pick a model profile. You can switch models later by re-deploying - no code change."
+              }
+            },
+            {
+              "name": "modelProfile",
+              "type": "Microsoft.Common.DropDown",
+              "label": "Model",
+              "defaultValue": "Claude Opus 4.7 - validation reference (swedencentral only)",
+              "toolTip": "Which of the paper's five models the logic check runs on.",
+              "constraints": {
+                "required": true,
+                "allowedValues": [
+                  { "label": "Claude Opus 4.7 - validation reference (swedencentral only)", "value": "claude-opus-4-7" },
+                  { "label": "GPT-5.5", "value": "gpt-5.5" },
+                  { "label": "Mistral Large 3 (EU provider)", "value": "mistral-large-3" },
+                  { "label": "DeepSeek V3.2 (lowest cost)", "value": "deepseek-v3.2" },
+                  { "label": "GPT-5.4-nano (fastest OpenAI)", "value": "gpt-5.4-nano" }
+                ]
+              }
+            },
+            {
+              "name": "modelCapacity",
+              "type": "Microsoft.Common.Slider",
+              "label": "Model capacity (thousands of tokens per minute)",
+              "min": 1,
+              "max": 200,
+              "defaultValue": 20,
+              "toolTip": "Requested capacity (thousands of tokens/min). Clamped to a safe per-model maximum, so a low value is fine for a first deploy."
+            },
+            {
+              "name": "promptInfo",
+              "type": "Microsoft.Common.InfoBox",
+              "visible": true,
+              "options": {
+                "icon": "Info",
+                "text": "The tool uses the study's v4_judge system prompt by default. Leave the box below empty to keep it, or paste an alternative to override."
+              }
+            },
+            {
+              "name": "systemPrompt",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Custom system prompt (optional)",
+              "multiLine": true,
+              "defaultValue": "",
+              "toolTip": "Optional. Overrides the built-in v4_judge prompt. Empty = paper default.",
+              "constraints": { "required": false }
+            }
+          ]
+        },
+        {
+          "name": "access",
+          "label": "Access",
+          "elements": [
+            {
+              "name": "authInfo",
+              "type": "Microsoft.Common.InfoBox",
+              "visible": true,
+              "options": {
+                "icon": "Info",
+                "text": "Choose how end users reach the app. 'No sign-in' relies on network restrictions (private endpoints / IP allow-list). 'Require Microsoft Entra ID' turns on built-in sign-in (Easy Auth); an administrator creates the app registration first - see the README."
+              }
+            },
+            {
+              "name": "authMode",
+              "type": "Microsoft.Common.OptionsGroup",
+              "label": "User sign-in",
+              "defaultValue": "No sign-in (restrict by network)",
+              "toolTip": "Whether visitors must sign in with Microsoft Entra ID before using the app.",
+              "constraints": {
+                "required": true,
+                "allowedValues": [
+                  { "label": "No sign-in (restrict by network)", "value": "none" },
+                  { "label": "Require Microsoft Entra ID sign-in", "value": "entra" }
+                ]
+              }
+            },
+            {
+              "name": "entraClientId",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Application (client) ID",
+              "visible": "[equals(steps('access').authMode, 'entra')]",
+              "toolTip": "The app registration's Application (client) ID. An administrator creates it beforehand (see README).",
+              "constraints": {
+                "required": "[equals(steps('access').authMode, 'entra')]",
+                "regex": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+                "validationMessage": "Enter the Application (client) ID (a GUID)."
+              }
+            },
+            {
+              "name": "entraTenantId",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Directory (tenant) ID (optional)",
+              "visible": "[equals(steps('access').authMode, 'entra')]",
+              "defaultValue": "",
+              "toolTip": "Leave empty to use the tenant you are deploying into.",
+              "constraints": { "required": false }
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "kind": "Subscription",
+        "location": "[steps('basics').scope.location.name]",
+        "subscriptionId": "[steps('basics').scope.subscription.id]",
+        "parameters": {
+          "location": "[steps('basics').scope.location.name]",
+          "nameSuffix": "[steps('basics').nameSuffix]",
+          "modelProfile": "[steps('model').modelProfile]",
+          "modelCapacity": "[steps('model').modelCapacity]",
+          "systemPrompt": "[steps('model').systemPrompt]",
+          "entraClientId": "[if(equals(steps('access').authMode, 'entra'), steps('access').entraClientId, '')]",
+          "entraTenantId": "[if(equals(steps('access').authMode, 'entra'), steps('access').entraTenantId, '')]"
+        }
+      }
+    }
+  }
+}

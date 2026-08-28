@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Inconsistency Check</title>
+<style>
+  :root {
+    --bg: #f4f6f8;
+    --surface: #ffffff;
+    --ink: #16202a;
+    --muted: #64727e;
+    --line: #e4e9ee;
+    --brand: #0e4d6e;
+    --brand-ink: #ffffff;
+    --focus: #2b83b3;
+    --low: #2e7d32; --med: #ef6c00; --high: #c62828;
+    --radius: 12px;
+    --shadow: 0 1px 2px rgba(16,32,42,.06), 0 4px 16px rgba(16,32,42,.06);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; color: var(--ink); background: var(--bg);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    background: linear-gradient(180deg, #0e4d6e, #0b3d59);
+    color: var(--brand-ink); padding: 18px 24px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .logo {
+    width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,.14);
+    display: grid; place-items: center; font-size: 18px; flex: none;
+  }
+  header .title { display: flex; flex-direction: column; }
+  header h1 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: .2px; }
+  header p { margin: 1px 0 0; font-size: 12.5px; opacity: .82; }
+  .pill {
+    margin-left: auto; font-size: 12px; background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.22); border-radius: 999px; padding: 5px 12px;
+    display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #9aa7b1; }
+  .dot.ok { background: #4ade80; } .dot.bad { background: #f87171; }
+  main { max-width: 940px; margin: 24px auto; padding: 0 18px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px;
+  }
+  label.field-label { display: block; font-weight: 600; font-size: 13px; margin: 0 0 8px; }
+  textarea {
+    width: 100%; min-height: 210px; padding: 13px 14px; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 10px; background: #fcfdfe;
+    font: 14px/1.6 ui-monospace, "Cascadia Code", Consolas, monospace; resize: vertical;
+  }
+  textarea:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: var(--focus); }
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  button {
+    font: inherit; font-size: 14px; font-weight: 600; border: 1px solid transparent;
+    padding: 9px 18px; border-radius: 9px; cursor: pointer; transition: filter .12s, background .12s;
+  }
+  button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .btn-primary { background: var(--brand); color: var(--brand-ink); }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-ghost { background: #eef2f5; color: var(--ink); border-color: var(--line); }
+  .btn-ghost:hover { background: #e6ecf0; }
+  button:disabled { opacity: .5; cursor: default; filter: none; }
+  .meta { margin-left: auto; font-size: 12.5px; color: var(--muted); }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  kbd {
+    font: inherit; font-size: 11px; background: #eef2f5; border: 1px solid var(--line);
+    border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px;
+  }
+  #summary { display: flex; gap: 8px; flex-wrap: wrap; margin: 22px 0 6px; }
+  .chip {
+    font-size: 12.5px; font-weight: 600; border-radius: 999px; padding: 5px 12px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+  }
+  .chip.high { color: var(--high); border-color: #f3c9c9; background: #fdf3f3; }
+  .chip.med  { color: var(--med);  border-color: #f6ddbf; background: #fdf7ee; }
+  .chip.low  { color: var(--low);  border-color: #c7e3c8; background: #f2f9f2; }
+  .issue {
+    background: var(--surface); border: 1px solid var(--line); border-left: 5px solid #cbd3da;
+    border-radius: 10px; box-shadow: var(--shadow); padding: 14px 16px; margin: 12px 0;
+  }
+  .issue.high { border-left-color: var(--high); }
+  .issue.med  { border-left-color: var(--med); }
+  .issue.low  { border-left-color: var(--low); }
+  .issue-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .issue h3 { margin: 0; font-size: 15.5px; font-weight: 650; flex: 1 1 auto; }
+  .badge { font-size: 11px; font-weight: 700; color: #fff; border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+  .badge.high { background: var(--high); } .badge.med { background: var(--med); } .badge.low { background: var(--low); }
+  .badge.cat { background: #52627a; }
+  .issue dl { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; margin: 0; }
+  .issue dt { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+  .issue dd { margin: 0; font-size: 13.5px; }
+  .state { text-align: center; color: var(--muted); padding: 26px 10px; font-size: 14px; }
+  .spinner {
+    width: 16px; height: 16px; border: 2px solid #ffffff88; border-top-color: #fff;
+    border-radius: 50%; display: inline-block; vertical-align: -3px; margin-right: 7px;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  footer { max-width: 940px; margin: 8px auto 40px; padding: 0 18px; }
+  .disclaimer {
+    font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line);
+    padding-top: 14px; margin-top: 22px;
+  }
+  .disclaimer strong { color: #8a5a00; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo" aria-hidden="true">&#9878;</div>
+  <div class="title">
+    <h1>Inconsistency Check</h1>
+    <p>Flags internal logical inconsistencies in clinical text - verify every finding.</p>
+  </div>
+  <span class="pill" id="health" title="Backend status"><span class="dot" id="health-dot"></span><span id="health-text">connecting&hellip;</span></span>
+</header>
+
+<main>
+  <section class="card">
+    <label class="field-label" for="text">Clinical text</label>
+    <textarea id="text" placeholder="Paste clinical text (e.g. a discharge summary) here&hellip;" aria-describedby="hint"></textarea>
+    <div class="toolbar">
+      <button id="analyze" class="btn-primary">Analyze</button>
+      <button id="paste" class="btn-ghost" type="button">Paste from clipboard</button>
+      <button id="clear" class="btn-ghost" type="button">Clear</button>
+      <span class="meta" id="charcount">0 characters</span>
+    </div>
+    <p class="hint" id="hint">Tip: paste with <kbd>Ctrl</kbd> + <kbd>V</kbd> to analyze automatically, or press <kbd>Ctrl</kbd> + <kbd>Enter</kbd>. Text is processed in memory and never stored.</p>
+  </section>
+
+  <div id="summary" hidden></div>
+  <div id="results" aria-live="polite"></div>
+</main>
+
+<footer>
+  <p class="disclaimer">
+    <strong>Not a medical device (MDR/IVDR).</strong> Findings are suggestions and must be verified by a qualified clinician,
+    who retains decision authority. Submitted text is processed in memory and not persisted.
+  </p>
+</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const SEV = (s) => (s >= 7 ? "high" : s >= 4 ? "med" : "low");
+const esc = (s) => { const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; };
+
+function setStatus(html, tone) {
+  $("results").innerHTML = html ? `<div class="state">${html}</div>` : "";
+}
+
+// --- health / connected model -------------------------------------------------
+(async () => {
+  try {
+    const r = await fetch("/api/health");
+    const h = await r.json();
+    const ok = r.ok && h.endpoint_configured;
+    $("health-dot").className = "dot " + (ok ? "ok" : "bad");
+    $("health-text").textContent = ok ? (h.deployment ? "model: " + h.deployment : "connected") : "not configured";
+  } catch {
+    $("health-dot").className = "dot bad";
+    $("health-text").textContent = "backend offline";
+  }
+})();
+
+// --- editor helpers -----------------------------------------------------------
+const AUTORUN = new URLSearchParams(location.search).has("autorun");
+const updateCount = () => { $("charcount").textContent = $("text").value.length.toLocaleString() + " characters"; };
+
+// Put text into the editor; optionally run the check immediately (zero-interaction workflow).
+function ingest(text, autorun) {
+  if (!text || !text.trim()) return;
+  $("text").value = text;
+  updateCount();
+  if (autorun) analyze();
+}
+
+$("text").addEventListener("input", updateCount);
+$("text").addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); analyze(); }
+});
+
+// Ctrl+V anywhere fills the editor and runs the check automatically (unless the user
+// is actively editing existing text). Reliable because paste is a trusted user gesture.
+document.addEventListener("paste", (e) => {
+  if (document.activeElement === $("text") && $("text").value.trim() !== "") return;
+  const pasted = (e.clipboardData || window.clipboardData).getData("text");
+  if (!pasted || !pasted.trim()) return;
+  e.preventDefault();
+  ingest(pasted, true);
+});
+
+// With ?autorun=1 (e.g. opened by dictation software), best-effort read the clipboard
+// and run on load. May be blocked without a gesture/permission - Ctrl+V is the fallback.
+window.addEventListener("load", async () => {
+  if (!AUTORUN) return;
+  try { ingest(await navigator.clipboard.readText(), true); } catch { /* rely on Ctrl+V */ }
+});
+
+$("paste").onclick = async () => {
+  try { ingest(await navigator.clipboard.readText(), false); }
+  catch { setStatus("Clipboard permission denied - paste manually or press Ctrl+V."); }
+};
+$("clear").onclick = () => { $("text").value = ""; updateCount(); $("summary").hidden = true; setStatus(""); };
+$("analyze").onclick = analyze;
+
+// --- analyze ------------------------------------------------------------------
+async function analyze() {
+  const text = $("text").value.trim();
+  $("summary").hidden = true;
+  if (!text) { setStatus("Enter or paste some clinical text first."); return; }
+  $("analyze").disabled = true;
+  $("results").innerHTML = `<div class="state"><span class="spinner"></span>Analyzing&hellip;</div>`;
+  try {
+    const res = await fetch("/api/analyze", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text })
+    });
+    if (!res.ok) throw new Error("request failed (HTTP " + res.status + ")");
+    const { issues } = await res.json();
+    render(issues || []);
+  } catch (e) {
+    setStatus("Error: " + esc(e.message));
+  } finally {
+    $("analyze").disabled = false;
+  }
+}
+
+function render(issues) {
+  if (!issues.length) { setStatus("&#10003; No internal inconsistencies flagged."); return; }
+  issues.sort((a, b) => (b.severity || 0) - (a.severity || 0));
+
+  const counts = { high: 0, med: 0, low: 0 };
+  issues.forEach((i) => counts[SEV(i.severity || 0)]++);
+  const labels = { high: "severe (7-9)", med: "relevant (4-6)", low: "minor (1-3)" };
+  $("summary").hidden = false;
+  $("summary").innerHTML =
+    `<span class="chip">${issues.length} finding${issues.length === 1 ? "" : "s"}</span>` +
+    ["high", "med", "low"].filter((k) => counts[k]).map((k) => `<span class="chip ${k}">${counts[k]} ${labels[k]}</span>`).join("");
+
+  $("results").innerHTML = issues.map((i) => {
+    const c = SEV(i.severity || 0);
+    const row = (label, val) => val ? `<dt>${label}</dt><dd>${esc(val)}</dd>` : "";
+    return `<article class="issue ${c}">
+      <div class="issue-head">
+        <h3>${esc(i.description)}</h3>
+        <span class="badge ${c}">severity ${i.severity ?? "?"}</span>
+        ${i.category ? `<span class="badge cat">${esc(i.category)}</span>` : ""}
+      </div>
+      <dl>
+        ${row("Context", i.context)}
+        ${row("Rationale", i.rationale)}
+        ${row("Clinical impact", i.clinical_impact)}
+        ${row("Suggested correction", i.correction)}
+      </dl>
+    </article>`;
+  }).join("");
+}
+</script>
+</body>
+</html>

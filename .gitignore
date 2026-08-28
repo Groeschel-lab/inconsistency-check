@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Secrets / local config (NEVER commit)
+.env
+*.env
+local.settings.json
+backend/local.settings.json
+**/models.json
+!**/models.example.json
+
+# Build / deploy artifacts
+*.zip
+dist/
+build/
+node_modules/
+
+# Analysis data (PHI — NEVER commit letter text or per-letter outputs)
+analysis/runs_*/
+!analysis/runs_*/README.md
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/

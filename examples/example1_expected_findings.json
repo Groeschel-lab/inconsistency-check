@@ -1,0 +1,41 @@
+{
+  "_comment": "Illustrative planted inconsistencies for example1_discharge_letter.txt (synthetic, fictional). A capable model should surface at least these; exact wording, count, and severity vary by model.",
+  "planted_inconsistencies": [
+    {
+      "description": "Aufnahmedatum liegt nach dem Entlassungsdatum",
+      "category": "Zeitlich",
+      "severity": 6,
+      "note": "Aufnahme 15.03.2024, Entlassung 10.03.2024 - Aufenthalt endet vor Beginn."
+    },
+    {
+      "description": "CRP-'Rückgang' auf einen höheren Wert",
+      "category": "Inhalt",
+      "severity": 5,
+      "note": "Von 180 mg/l auf 210 mg/l ist ein Anstieg, kein Rückgang."
+    },
+    {
+      "description": "Antibiotikum trotz dokumentierter Penicillin-Allergie",
+      "category": "Inhalt",
+      "severity": 8,
+      "note": "Bekannte Penicillin-Allergie, dennoch Amoxicillin (ein Penicillin) verordnet."
+    },
+    {
+      "description": "Dosierungseinheit L-Thyroxin unplausibel (mg statt µg)",
+      "category": "Inhalt",
+      "severity": 8,
+      "note": "L-Thyroxin wird in Mikrogramm dosiert; '50 mg' wäre eine 1000-fache Überdosierung."
+    },
+    {
+      "description": "Geschlechtsangabe uneinheitlich",
+      "category": "Sprachlich",
+      "severity": 3,
+      "note": "'Herr Max Mustermann' / 'Patienten', aber 'Die Patientin konnte ... entlassen werden'."
+    },
+    {
+      "description": "Wiedervorstellungstermin liegt vor der Entlassung",
+      "category": "Zeitlich",
+      "severity": 4,
+      "note": "Termin 05.03.2024, Entlassung 10.03.2024 - Follow-up in der Vergangenheit."
+    }
+  ]
+}
