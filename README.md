@@ -106,6 +106,15 @@ Open http://127.0.0.1:8000 and paste text, or try the [`examples/`](examples/).
 ## Try it with the examples
 Two synthetic, fictional, PHI-free discharge letters with planted inconsistencies are in [`examples/`](examples/) - paste one into the app to see the output, or use them for a smoke test.
 
+## Reproducing deployment timing
+To reproduce the deployment-time figure from the paper, run [`scripts/measure-deploy-time.ps1`](scripts/measure-deploy-time.ps1). It provisions the full stack `N` times into fresh resource groups, times each run, then **deletes** them (it creates and removes `rg-logiccheck-<prefix><i>`). Prerequisites are the same as the [1-click deployment](#before-the-click), plus Azure CLI (`az login`) and PowerShell 7.
+
+```powershell
+pwsh scripts/measure-deploy-time.ps1 -N 3 -Model claude-opus-4-7 -Region swedencentral
+```
+
+It reports three milestones per run (mean +/- SD): ARM provisioning (command -> `Succeeded`), time to `GET /api/health` = 200, and time to the first successful `POST /api/analyze` = 200 - the last being the true end-to-end "system usable" moment (RBAC has propagated and the model answers over the private endpoint). Reference run (Claude Opus 4.7, `swedencentral`, n = 3): ARM 212 +/- 18 s; first successful model call 244 +/- 52 s.
+
 ## Research & evaluation
 This repository is the **deployable tool** only. The study's evaluation pipeline and PHI-free aggregate metrics are maintained separately and are available from the authors on reasonable request (see the paper). No patient data is included here.
 
