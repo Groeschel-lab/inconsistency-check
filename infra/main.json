@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "4445747959064680068"
+      "templateHash": "886413649983630653"
     }
   },
   "parameters": {
@@ -168,7 +168,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "8007901603361966575"
+              "templateHash": "14909798468942904069"
             }
           },
           "parameters": {
@@ -267,6 +267,11 @@
               "queue",
               "table",
               "file"
+            ],
+            "foundryPrivateDnsZones": [
+              "privatelink.cognitiveservices.azure.com",
+              "privatelink.openai.azure.com",
+              "privatelink.services.ai.azure.com"
             ],
             "promptSetting": "[if(empty(parameters('systemPrompt')), createArray(), createArray(createObject('name', 'SYSTEM_PROMPT', 'value', parameters('systemPrompt'))))]",
             "authEnabled": "[not(empty(parameters('entraClientId')))]",
@@ -444,6 +449,85 @@
               "dependsOn": [
                 "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.{0}.{1}', variables('storageSubResources')[copyIndex()], environment().suffixes.storage))]",
                 "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}-lc-{1}', variables('storageSubResources')[copyIndex()], parameters('nameSuffix')))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "foundryDnsZonesRes",
+                "count": "[length(variables('foundryPrivateDnsZones'))]"
+              },
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "[variables('foundryPrivateDnsZones')[copyIndex()]]",
+              "location": "global"
+            },
+            {
+              "copy": {
+                "name": "foundryDnsLinks",
+                "count": "[length(variables('foundryPrivateDnsZones'))]"
+              },
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', variables('foundryPrivateDnsZones')[copyIndex()], 'link-aif')]",
+              "location": "global",
+              "properties": {
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-lc-{0}', parameters('nameSuffix')))]"
+                },
+                "registrationEnabled": false
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('foundryPrivateDnsZones')[copyIndex()])]",
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-lc-{0}', parameters('nameSuffix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[format('pe-aif-lc-{0}', parameters('nameSuffix'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', format('vnet-lc-{0}', parameters('nameSuffix')), 'snet-pe')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "aif",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.CognitiveServices/accounts', format('aif-{0}', parameters('nameSuffix')))]",
+                      "groupIds": [
+                        "account"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix')))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', format('vnet-lc-{0}', parameters('nameSuffix')), 'snet-pe')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', format('pe-aif-lc-{0}', parameters('nameSuffix')), 'default')]",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "privateDnsZoneConfigs",
+                    "count": "[length(variables('foundryPrivateDnsZones'))]",
+                    "input": {
+                      "name": "[format('zone-{0}', copyIndex('privateDnsZoneConfigs'))]",
+                      "properties": {
+                        "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('foundryPrivateDnsZones')[copyIndex('privateDnsZoneConfigs')])]"
+                      }
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "foundryDnsZonesRes",
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-aif-lc-{0}', parameters('nameSuffix')))]"
               ]
             },
             {
@@ -633,7 +717,7 @@
                     "_generator": {
                       "name": "bicep",
                       "version": "0.44.1.10279",
-                      "templateHash": "8817443254018293020"
+                      "templateHash": "13038460734872777661"
                     }
                   },
                   "parameters": {
@@ -751,7 +835,7 @@
                       "properties": {
                         "customSubDomainName": "[format('aif-{0}', parameters('nameSuffix'))]",
                         "disableLocalAuth": true,
-                        "publicNetworkAccess": "Enabled"
+                        "publicNetworkAccess": "Disabled"
                       }
                     },
                     {

@@ -49,7 +49,8 @@ resource ai 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   properties: {
     customSubDomainName: 'aif-${nameSuffix}'
     disableLocalAuth: true
-    publicNetworkAccess: 'Enabled'
+    // Private only: the app reaches the model over a Private Endpoint (see core.bicep), so clinical text stays on the VNet.
+    publicNetworkAccess: 'Disabled'
   }
 }
 

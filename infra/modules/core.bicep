@@ -49,6 +49,11 @@ var cognitiveServicesOpenAIUserRole = '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd'
 var cognitiveServicesUserRole = 'a97b65f3-24c7-4388-baec-2e87135dc908'
 
 var storageSubResources = [ 'blob', 'queue', 'table', 'file' ]
+var foundryPrivateDnsZones = [
+  'privatelink.cognitiveservices.azure.com'
+  'privatelink.openai.azure.com'
+  'privatelink.services.ai.azure.com'
+]
 
 // Storage (Functions runtime - keyless, no shared keys)
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
@@ -172,6 +177,51 @@ resource storagePeDnsGroups 'Microsoft.Network/privateEndpoints/privateDnsZoneGr
     privateDnsZoneConfigs: [ { name: sub, properties: { privateDnsZoneId: storageDnsZones[i].id } } ]
   }
 }]
+
+// Private Endpoint + DNS (AI Foundry model over VNet) - keeps clinical text on the tenant network
+resource foundryDnsZonesRes 'Microsoft.Network/privateDnsZones@2020-06-01' = [for z in foundryPrivateDnsZones: {
+  name: z
+  location: 'global'
+}]
+
+resource foundryDnsLinks 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = [for (z, i) in foundryPrivateDnsZones: {
+  parent: foundryDnsZonesRes[i]
+  name: 'link-aif'
+  location: 'global'
+  properties: {
+    virtualNetwork: { id: vnet.id }
+    registrationEnabled: false
+  }
+}]
+
+resource foundryPe 'Microsoft.Network/privateEndpoints@2024-01-01' = {
+  name: 'pe-aif-lc-${nameSuffix}'
+  location: location
+  properties: {
+    subnet: { id: subnetPe.id }
+    privateLinkServiceConnections: [
+      {
+        name: 'aif'
+        properties: {
+          privateLinkServiceId: llmAccount.id
+          groupIds: [ 'account' ]
+        }
+      }
+    ]
+  }
+  dependsOn: [ llm ]
+}
+
+resource foundryPeDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-01-01' = {
+  parent: foundryPe
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [for (z, i) in foundryPrivateDnsZones: {
+      name: 'zone-${i}'
+      properties: { privateDnsZoneId: foundryDnsZonesRes[i].id }
+    }]
+  }
+}
 
 // Function App
 var promptSetting = empty(systemPrompt) ? [] : [ { name: 'SYSTEM_PROMPT', value: systemPrompt } ]
