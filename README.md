@@ -107,13 +107,17 @@ Open http://127.0.0.1:8000 and paste text, or try the [`examples/`](examples/).
 Two synthetic, fictional, PHI-free discharge letters with planted inconsistencies are in [`examples/`](examples/) - paste one into the app to see the output, or use them for a smoke test.
 
 ## Reproducing deployment timing
-To reproduce the deployment-time figure from the paper, run [`scripts/measure-deploy-time.ps1`](scripts/measure-deploy-time.ps1). It provisions the full stack `N` times into fresh resource groups, times each run, then **deletes** them (it creates and removes `rg-logiccheck-<prefix><i>`). Prerequisites are the same as the [1-click deployment](#before-the-click), plus Azure CLI (`az login`) and PowerShell 7.
+The paper benchmark is implemented in [`deployment-benchmark.ipynb`](deployment-benchmark.ipynb). In Sweden Central, each of the five paper models is deployed once per randomized block for five blocks (25 fresh, serial attempts). Serial execution prevents benchmark-induced quota or control-plane contention; block randomization reduces order and time-of-day bias.
 
-```powershell
-pwsh scripts/measure-deploy-time.ps1 -N 3 -Model claude-opus-4-7 -Region swedencentral
-```
+Open the notebook with a Python kernel and run the cells in order. The default `EXECUTE = False` performs only the preflight checks and displays the deterministic run order. A campaign requires a clean, pushed protocol version and an explicit change to `EXECUTE = True`.
 
-It reports three milestones per run (mean +/- SD): ARM provisioning (command -> `Succeeded`), time to `GET /api/health` = 200, and time to the first successful `POST /api/analyze` = 200 - the last being the true end-to-end "system usable" moment (RBAC has propagated and the model answers over the private endpoint). Reference run (Claude Opus 4.7, `swedencentral`, n = 3): ARM 212 +/- 18 s; first successful model call 244 +/- 52 s.
+There is one reported endpoint: the first valid result from `POST /api/analyze` using a synthetic, PHI-free probe. The clock starts immediately before Azure CLI submits the commit-pinned GitHub ARM template and stops when that model result arrives. This demonstrates operational readiness of the app, private networking, managed identity, RBAC, model deployment, and inference in one clinically understandable measure. Preflight and cleanup are excluded.
+
+The checkpointed JSON report contains every attempt plus, per model, the arithmetic mean, sample standard deviation, range, and all five observations. Failures and 30-minute timeouts remain in the denominator and are never replaced. The report also records the run order and seed, timestamps, measurement site, exact Git commit and template hash, release-package hash, and runtime environment.
+
+For a protocol-compliant run, use a clean, pushed checkout; retain the prespecified settings; record the approximate client location and network type; ensure quota for all models; and avoid unrelated deployments in the subscription. The notebook verifies the pinned GitHub inputs before measurement. After each attempt, it removes the model deployment, deletes and purges the Foundry account to release quota, and then synchronously deletes the remaining resource group and subscription deployment record before starting the next attempt. A completed campaign therefore leaves no benchmark resources or deployment records. An interrupted process may require the notebook's recovery cell.
+
+The experiment quantifies automated deployment-to-model-response time after the equivalent of the portal's final **Create** action. It does not measure portal form entry or establish usability for technically inexperienced clinicians; that requires a separate user study.
 
 ## Research & evaluation
 This repository is the **deployable tool** only. The study's evaluation pipeline and PHI-free aggregate metrics are maintained separately and are available from the authors on reasonable request (see the paper). No patient data is included here.
