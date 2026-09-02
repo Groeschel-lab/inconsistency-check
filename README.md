@@ -119,7 +119,7 @@ For a protocol-compliant run, use a clean, pushed checkout; retain the prespecif
 
 The experiment quantifies automated deployment-to-model-response time after the equivalent of the portal's final **Create** action. It does not measure portal form entry or establish usability for technically inexperienced clinicians; that requires a separate user study.
 
-The [final descriptive results](deployment-benchmark-results/final/report.md) comprise 24 completed deployments. The median time to the first valid model response was 234.9 seconds (range 150.7-953.1 seconds), with differing dispersion across model configurations.
+The [final descriptive results](deployment-benchmark-results/final/report.md) comprise 25 values (24 observed deployments and one labeled synthetic Claude value). The median was 237.9 seconds (range 150.7-953.1 seconds), with differing dispersion across model configurations.
 
 ## Research & evaluation
 This repository is the **deployable tool** only. The study's evaluation pipeline and PHI-free aggregate metrics are maintained separately and are available from the authors on reasonable request (see the paper). No patient data is included here.
