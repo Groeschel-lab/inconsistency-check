@@ -1,9 +1,9 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "state": "final",
   "outcome": "seconds from immutable ARM submission to first valid POST /api/analyze result",
-  "selection": "Chronologically first 25 successful measurements across the two original benchmark runs.",
-  "method_note": "Measurements without a returned result were repeated; only completed deployments were included in the descriptive timing summary.",
+  "selection": "Chronologically first five completed measurements per model across the original benchmark runs; four completed measurements were available for Claude Opus 4.7.",
+  "method_note": "Only completed deployments were included; no value was imputed.",
   "interpretation": "The complete IaC deployment reached its first valid model response within minutes rather than days; dispersion differed between model configurations.",
   "common_configuration": {
     "result_contract": "HTTP 200 JSON containing an issues property",
@@ -30,11 +30,11 @@
     }
   ],
   "overall": {
-    "n": 25,
-    "mean_s": 305.2,
-    "sample_sd_s": 199.4,
-    "median_s": 231.9,
-    "min_s": 144.5,
+    "n": 24,
+    "mean_s": 312.5,
+    "sample_sd_s": 200.5,
+    "median_s": 234.9,
+    "min_s": 150.7,
     "max_s": 953.1
   },
   "by_model": [
@@ -50,33 +50,33 @@
     },
     {
       "model": "gpt-5.5",
-      "n": 6,
-      "mean_s": 294.8,
-      "sample_sd_s": 181.7,
-      "median_s": 244.4,
+      "n": 5,
+      "mean_s": 311.2,
+      "sample_sd_s": 198.1,
+      "median_s": 258.8,
       "min_s": 150.7,
       "max_s": 656.6,
       "range_s": 505.9
     },
     {
       "model": "mistral-large-3",
-      "n": 4,
-      "mean_s": 500.3,
-      "sample_sd_s": 355.3,
-      "median_s": 428.5,
+      "n": 5,
+      "mean_s": 445.9,
+      "sample_sd_s": 330.8,
+      "median_s": 244.4,
       "min_s": 191.0,
       "max_s": 953.1,
       "range_s": 762.1
     },
     {
       "model": "deepseek-v3.2",
-      "n": 6,
-      "mean_s": 277.0,
-      "sample_sd_s": 171.3,
-      "median_s": 227.5,
-      "min_s": 144.5,
+      "n": 5,
+      "mean_s": 303.5,
+      "sample_sd_s": 177.2,
+      "median_s": 231.9,
+      "min_s": 203.6,
       "max_s": 619.6,
-      "range_s": 475.1
+      "range_s": 416.0
     },
     {
       "model": "gpt-5.4-nano",
@@ -391,29 +391,16 @@
     },
     {
       "measurement": 24,
-      "model": "gpt-5.5",
-      "duration_s": 213.095,
-      "duration_min": 3.5515833333,
-      "started_utc": "2026-09-01T19:43:28.016507Z",
-      "response_utc": "2026-09-01T19:47:01.112081+00:00",
-      "attempts": 37,
+      "model": "mistral-large-3",
+      "duration_s": 228.638,
+      "duration_min": 3.8106333333,
+      "started_utc": "2026-09-01T20:07:41.657489Z",
+      "response_utc": "2026-09-01T20:11:30.295735+00:00",
+      "attempts": 36,
       "source_campaign_id": "20260901T160155Z-382764",
       "source_protocol": "deployment-to-model-response-v1.0.1",
       "source_repository_commit": "9f0b3024c19a33eb453266262745515d06c2a112",
-      "source_sequence": 17
-    },
-    {
-      "measurement": 25,
-      "model": "deepseek-v3.2",
-      "duration_s": 144.53,
-      "duration_min": 2.4088333333,
-      "started_utc": "2026-09-01T19:51:25.667032Z",
-      "response_utc": "2026-09-01T19:53:50.197206+00:00",
-      "attempts": 25,
-      "source_campaign_id": "20260901T160155Z-382764",
-      "source_protocol": "deployment-to-model-response-v1.0.1",
-      "source_repository_commit": "9f0b3024c19a33eb453266262745515d06c2a112",
-      "source_sequence": 18
+      "source_sequence": 20
     }
   ]
 }

@@ -1,27 +1,27 @@
 [
   {
     "file": "deployment-time-by-model.png",
-    "bytes": 151006,
-    "sha256": "4e8fad0eaacc98d7d187b8694684f24ff43c92449d438765d6f4f5aa80564c59"
+    "bytes": 148658,
+    "sha256": "bb542f6fdab19de5785164b775451e91fed2441c4c8f37c4ee674bd3b9785454"
   },
   {
     "file": "raw.csv",
-    "bytes": 5091,
-    "sha256": "d06f4ab3299451338c10b245f672a5ac55fed28701dc1c7d01f020a0044f98be"
+    "bytes": 4899,
+    "sha256": "87693abc0986b090233ff8738b9bcf6842c425cd212faa4340cda6b42d467262"
   },
   {
     "file": "report.json",
-    "bytes": 15452,
-    "sha256": "5df92d991fe4ced79e724a2ff6203d7a2d7eaca2760355071b3af1788239cb05"
+    "bytes": 14961,
+    "sha256": "e2c2f2a95175a8bc0b635ba213a9ef928ca9d44267217f33f7e65b7b3c0a7fdc"
   },
   {
     "file": "report.md",
-    "bytes": 1328,
-    "sha256": "c97ac0fd5e8ceab210d56ec3e9bdc1022da526bf94c61671672d60e479e1d810"
+    "bytes": 1125,
+    "sha256": "c9c2dc4fcbc2418dbc569860cb6413157d5120b7c473dafc8f84116836a1d0d0"
   },
   {
     "file": "summary.csv",
     "bytes": 317,
-    "sha256": "55fadde375f92d98487e02d8bc03b7df98539bc2e736845b878bc9ea60c2a82f"
+    "sha256": "a04733277f9cf71e81f9e735794a450927b6f6ee1cb32fb55675de38887de3fb"
   }
 ]
