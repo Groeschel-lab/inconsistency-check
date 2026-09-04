@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.44.1.10279",
-      "templateHash": "886413649983630653"
+      "version": "0.46.1.21595",
+      "templateHash": "13691342867385059593"
     }
   },
   "parameters": {
@@ -56,35 +56,43 @@
       "type": "string",
       "defaultValue": "Healthcare organization",
       "metadata": {
-        "description": "Organization name for Anthropic (Claude) model provider data (marketplace requirement for Claude)."
+        "description": "Organization name for the model provider data."
       }
     },
     "countryCode": {
       "type": "string",
       "defaultValue": "DE",
       "metadata": {
-        "description": "ISO 3166 alpha-2 country code for Anthropic model provider data."
+        "description": "ISO 3166 alpha-2 country code for the model provider data."
       }
     },
     "industry": {
       "type": "string",
       "defaultValue": "Healthcare",
       "metadata": {
-        "description": "Industry for Anthropic model provider data."
+        "description": "Industry for the model provider data."
+      }
+    },
+    "institutionName": {
+      "type": "string",
+      "defaultValue": "",
+      "maxLength": 60,
+      "metadata": {
+        "description": "Optional institution name displayed in the frontend AI model access indicator."
       }
     },
     "systemPrompt": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "Optional. Override the built-in v4_judge system prompt. Empty = paper default."
+        "description": "Optional. Override the built-in German v4_judge system prompt. Empty = paper default."
       }
     },
     "entraClientId": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "Optional. Entra app registration (client) ID to require user sign-in. Empty = no user auth. Create the app registration yourself - see README."
+        "description": "Optional, recommended. Entra app registration (client) ID to require user sign-in. Empty = no user auth. Create the app registration yourself - see README."
       }
     },
     "entraTenantId": {
@@ -96,9 +104,9 @@
     },
     "packageUri": {
       "type": "string",
-      "defaultValue": "https://github.com/helloworld-germany/inconsistency-check/releases/latest/download/app.zip",
+      "defaultValue": "https://github.com/groeschel-lab/inconsistency-check/releases/latest/download/app.zip",
       "metadata": {
-        "description": "Application package (zip). Defaults to the latest GitHub release build."
+        "description": "Application package (zip). Defaults to the research GitHub release build."
       }
     },
     "resourceGroupName": {
@@ -148,6 +156,9 @@
           "industry": {
             "value": "[parameters('industry')]"
           },
+          "institutionName": {
+            "value": "[parameters('institutionName')]"
+          },
           "systemPrompt": {
             "value": "[parameters('systemPrompt')]"
           },
@@ -167,15 +178,15 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.44.1.10279",
-              "templateHash": "14909798468942904069"
+              "version": "0.46.1.21595",
+              "templateHash": "12452315787040575475"
             }
           },
           "parameters": {
             "location": {
               "type": "string",
               "metadata": {
-                "description": "Azure region for all resources."
+                "description": "Azure region (EU). Claude Opus 4.7 (the paper reference model) is only in swedencentral."
               }
             },
             "nameSuffix": {
@@ -183,7 +194,7 @@
               "minLength": 3,
               "maxLength": 8,
               "metadata": {
-                "description": "Unique suffix for globally unique names (3-8 lowercase)."
+                "description": "Short unique suffix for resource names (3-8 lowercase letters/digits, e.g. logic1)."
               }
             },
             "modelProfile": {
@@ -196,7 +207,7 @@
                 "gpt-5.4-nano"
               ],
               "metadata": {
-                "description": "Which of the paper's five models to deploy."
+                "description": "Which of the paper's five models to deploy. Claude Opus 4.7 is the validation reference."
               }
             },
             "modelCapacity": {
@@ -204,48 +215,56 @@
               "defaultValue": 20,
               "minValue": 1,
               "metadata": {
-                "description": "Requested model capacity (thousands of tokens/min); clamped per model."
+                "description": "Requested model capacity (thousands of tokens/min); clamped to a safe per-model maximum."
               }
             },
             "organizationName": {
               "type": "string",
               "defaultValue": "Healthcare organization",
               "metadata": {
-                "description": "Organization name for Anthropic (Claude) model provider data."
+                "description": "Organization name for the model provider data."
               }
             },
             "countryCode": {
               "type": "string",
               "defaultValue": "DE",
               "metadata": {
-                "description": "ISO 3166 alpha-2 country code for Anthropic model provider data."
+                "description": "ISO 3166 alpha-2 country code for the model provider data."
               }
             },
             "industry": {
               "type": "string",
               "defaultValue": "Healthcare",
               "metadata": {
-                "description": "Industry for Anthropic model provider data."
+                "description": "Industry for the model provider data."
+              }
+            },
+            "institutionName": {
+              "type": "string",
+              "defaultValue": "",
+              "maxLength": 60,
+              "metadata": {
+                "description": "Optional institution name displayed in the frontend AI model access indicator."
               }
             },
             "systemPrompt": {
               "type": "string",
               "defaultValue": "",
               "metadata": {
-                "description": "Optional system-prompt override (empty = built-in v4_judge default)."
+                "description": "Optional. Override the built-in German v4_judge system prompt. Empty = paper default."
               }
             },
             "packageUri": {
               "type": "string",
               "metadata": {
-                "description": "Public HTTPS URL of the Function App .zip to run via WEBSITE_RUN_FROM_PACKAGE."
+                "description": "Application package (zip). Defaults to the research GitHub release build."
               }
             },
             "entraClientId": {
               "type": "string",
               "defaultValue": "",
               "metadata": {
-                "description": "Entra app registration (client) ID for end-user sign-in. Empty = no user auth (network-restricted only). You create the app registration yourself - see README."
+                "description": "Optional, recommended. Entra app registration (client) ID to require user sign-in. Empty = no user auth. Create the app registration yourself - see README."
               }
             },
             "entraTenantId": {
@@ -274,6 +293,8 @@
               "privatelink.services.ai.azure.com"
             ],
             "promptSetting": "[if(empty(parameters('systemPrompt')), createArray(), createArray(createObject('name', 'SYSTEM_PROMPT', 'value', parameters('systemPrompt'))))]",
+            "institutionSetting": "[if(empty(parameters('institutionName')), createArray(), createArray(createObject('name', 'INSTITUTION_NAME', 'value', parameters('institutionName'))))]",
+            "functionAppName": "[format('func-lc-{0}', parameters('nameSuffix'))]",
             "authEnabled": "[not(empty(parameters('entraClientId')))]",
             "effectiveTenantId": "[if(empty(parameters('entraTenantId')), tenant().tenantId, parameters('entraTenantId'))]"
           },
@@ -540,7 +561,7 @@
             {
               "type": "Microsoft.Web/sites",
               "apiVersion": "2023-12-01",
-              "name": "[format('func-lc-{0}', parameters('nameSuffix'))]",
+              "name": "[variables('functionAppName')]",
               "location": "[parameters('location')]",
               "kind": "functionapp,linux",
               "identity": "[if(variables('authEnabled'), createObject('type', 'SystemAssigned, UserAssigned', 'userAssignedIdentities', createObject(format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-auth-{0}', parameters('nameSuffix')))), createObject())), createObject('type', 'SystemAssigned'))]",
@@ -552,7 +573,13 @@
                   "linuxFxVersion": "Python|3.11",
                   "ftpsState": "Disabled",
                   "minTlsVersion": "1.2",
-                  "appSettings": "[union(createArray(createObject('name', 'FUNCTIONS_EXTENSION_VERSION', 'value', '~4'), createObject('name', 'FUNCTIONS_WORKER_RUNTIME', 'value', 'python'), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Insights/components', format('appi-lc-{0}', parameters('nameSuffix'))), '2020-02-02').ConnectionString), createObject('name', 'AzureWebJobsStorage__accountName', 'value', format('stlc{0}', parameters('nameSuffix'))), createObject('name', 'AzureWebJobsStorage__credential', 'value', 'managedidentity'), createObject('name', 'WEBSITE_RUN_FROM_PACKAGE', 'value', parameters('packageUri')), createObject('name', 'WEBSITE_VNET_ROUTE_ALL', 'value', '0'), createObject('name', 'SCM_DO_BUILD_DURING_DEPLOYMENT', 'value', 'false'), createObject('name', 'WEBSITE_USE_PLACEHOLDER', 'value', '0'), createObject('name', 'AZURE_AI_ENDPOINT', 'value', reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.endpoint.value), createObject('name', 'AZURE_AI_DEPLOYMENT', 'value', reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.deploymentName.value), createObject('name', 'MODEL_FORMAT', 'value', reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.modelFormat.value)), variables('promptSetting'), if(variables('authEnabled'), createArray(createObject('name', 'OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID', 'value', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-auth-{0}', parameters('nameSuffix'))), '2023-01-31').clientId)), createArray()))]"
+                  "cors": {
+                    "allowedOrigins": [
+                      "[format('https://{0}.azurewebsites.net', variables('functionAppName'))]"
+                    ],
+                    "supportCredentials": false
+                  },
+                  "appSettings": "[union(createArray(createObject('name', 'FUNCTIONS_EXTENSION_VERSION', 'value', '~4'), createObject('name', 'FUNCTIONS_WORKER_RUNTIME', 'value', 'python'), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Insights/components', format('appi-lc-{0}', parameters('nameSuffix'))), '2020-02-02').ConnectionString), createObject('name', 'AzureWebJobsStorage__accountName', 'value', format('stlc{0}', parameters('nameSuffix'))), createObject('name', 'AzureWebJobsStorage__credential', 'value', 'managedidentity'), createObject('name', 'WEBSITE_RUN_FROM_PACKAGE', 'value', parameters('packageUri')), createObject('name', 'WEBSITE_VNET_ROUTE_ALL', 'value', '0'), createObject('name', 'SCM_DO_BUILD_DURING_DEPLOYMENT', 'value', 'false'), createObject('name', 'WEBSITE_USE_PLACEHOLDER', 'value', '0'), createObject('name', 'AZURE_AI_ENDPOINT', 'value', reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.endpoint.value), createObject('name', 'AZURE_AI_DEPLOYMENT', 'value', reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.deploymentName.value), createObject('name', 'MODEL_FORMAT', 'value', reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.modelFormat.value)), variables('promptSetting'), variables('institutionSetting'), if(variables('authEnabled'), createArray(createObject('name', 'OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID', 'value', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-auth-{0}', parameters('nameSuffix'))), '2023-01-31').clientId)), createArray()))]"
                 }
               },
               "dependsOn": [
@@ -569,7 +596,7 @@
               "condition": "[variables('authEnabled')]",
               "type": "Microsoft.Web/sites/config",
               "apiVersion": "2023-12-01",
-              "name": "[format('{0}/{1}', format('func-lc-{0}', parameters('nameSuffix')), 'authsettingsV2')]",
+              "name": "[format('{0}/{1}', variables('functionAppName'), 'authsettingsV2')]",
               "properties": {
                 "platform": {
                   "enabled": true
@@ -602,21 +629,21 @@
                 }
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix')))]"
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
               ]
             },
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]",
-              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix'))), resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix'))), variables('storageBlobDataOwnerRole'))]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix'))), resourceId('Microsoft.Web/sites', variables('functionAppName')), variables('storageBlobDataOwnerRole'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDataOwnerRole'))]",
-                "principalId": "[reference(resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix'))), '2023-12-01', 'full').identity.principalId]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01', 'full').identity.principalId]",
                 "principalType": "ServicePrincipal"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix')))]",
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
                 "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]"
               ]
             },
@@ -624,14 +651,14 @@
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]",
-              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix'))), resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix'))), variables('storageQueueDataContributorRole'))]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix'))), resourceId('Microsoft.Web/sites', variables('functionAppName')), variables('storageQueueDataContributorRole'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageQueueDataContributorRole'))]",
-                "principalId": "[reference(resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix'))), '2023-12-01', 'full').identity.principalId]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01', 'full').identity.principalId]",
                 "principalType": "ServicePrincipal"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix')))]",
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
                 "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]"
               ]
             },
@@ -639,14 +666,14 @@
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]",
-              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix'))), resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix'))), variables('storageTableDataContributorRole'))]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix'))), resourceId('Microsoft.Web/sites', variables('functionAppName')), variables('storageTableDataContributorRole'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageTableDataContributorRole'))]",
-                "principalId": "[reference(resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix'))), '2023-12-01', 'full').identity.principalId]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01', 'full').identity.principalId]",
                 "principalType": "ServicePrincipal"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix')))]",
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
                 "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]"
               ]
             },
@@ -654,28 +681,28 @@
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[resourceId('Microsoft.CognitiveServices/accounts', format('aif-{0}', parameters('nameSuffix')))]",
-              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', format('aif-{0}', parameters('nameSuffix'))), resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix'))), variables('cognitiveServicesOpenAIUserRole'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', format('aif-{0}', parameters('nameSuffix'))), resourceId('Microsoft.Web/sites', variables('functionAppName')), variables('cognitiveServicesOpenAIUserRole'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesOpenAIUserRole'))]",
-                "principalId": "[reference(resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix'))), '2023-12-01', 'full').identity.principalId]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01', 'full').identity.principalId]",
                 "principalType": "ServicePrincipal"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix')))]"
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
               ]
             },
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
               "scope": "[resourceId('Microsoft.CognitiveServices/accounts', format('aif-{0}', parameters('nameSuffix')))]",
-              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', format('aif-{0}', parameters('nameSuffix'))), resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix'))), variables('cognitiveServicesUserRole'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', format('aif-{0}', parameters('nameSuffix'))), resourceId('Microsoft.Web/sites', variables('functionAppName')), variables('cognitiveServicesUserRole'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesUserRole'))]",
-                "principalId": "[reference(resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix'))), '2023-12-01', 'full').identity.principalId]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01', 'full').identity.principalId]",
                 "principalType": "ServicePrincipal"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix')))]"
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
               ]
             },
             {
@@ -716,15 +743,15 @@
                   "metadata": {
                     "_generator": {
                       "name": "bicep",
-                      "version": "0.44.1.10279",
-                      "templateHash": "13038460734872777661"
+                      "version": "0.46.1.21595",
+                      "templateHash": "12969234543637383992"
                     }
                   },
                   "parameters": {
                     "location": {
                       "type": "string",
                       "metadata": {
-                        "description": "Azure region for the AIServices account."
+                        "description": "Azure region (EU). Claude Opus 4.7 (the paper reference model) is only in swedencentral."
                       }
                     },
                     "nameSuffix": {
@@ -732,7 +759,7 @@
                       "minLength": 3,
                       "maxLength": 8,
                       "metadata": {
-                        "description": "Unique suffix appended to resource names."
+                        "description": "Short unique suffix for resource names (3-8 lowercase letters/digits, e.g. logic1)."
                       }
                     },
                     "modelProfile": {
@@ -745,7 +772,7 @@
                         "gpt-5.4-nano"
                       ],
                       "metadata": {
-                        "description": "Which of the paper's five models to deploy."
+                        "description": "Which of the paper's five models to deploy. Claude Opus 4.7 is the validation reference."
                       }
                     },
                     "modelCapacity": {
@@ -753,28 +780,28 @@
                       "defaultValue": 20,
                       "minValue": 1,
                       "metadata": {
-                        "description": "Requested capacity (thousands of tokens/min); clamped to a safe per-model maximum."
+                        "description": "Requested model capacity (thousands of tokens/min); clamped to a safe per-model maximum."
                       }
                     },
                     "organizationName": {
                       "type": "string",
                       "defaultValue": "Healthcare organization",
                       "metadata": {
-                        "description": "Organization name for Anthropic (Claude) model provider data. Required for Claude; ignored for other models."
+                        "description": "Organization name for the model provider data."
                       }
                     },
                     "countryCode": {
                       "type": "string",
                       "defaultValue": "DE",
                       "metadata": {
-                        "description": "ISO 3166 alpha-2 country code for Anthropic model provider data."
+                        "description": "ISO 3166 alpha-2 country code for the model provider data."
                       }
                     },
                     "industry": {
                       "type": "string",
                       "defaultValue": "Healthcare",
                       "metadata": {
-                        "description": "Industry for Anthropic model provider data."
+                        "description": "Industry for the model provider data."
                       }
                     }
                   },
@@ -885,11 +912,11 @@
           "outputs": {
             "functionAppName": {
               "type": "string",
-              "value": "[format('func-lc-{0}', parameters('nameSuffix'))]"
+              "value": "[variables('functionAppName')]"
             },
             "functionAppUrl": {
               "type": "string",
-              "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', format('func-lc-{0}', parameters('nameSuffix'))), '2023-12-01').defaultHostName)]"
+              "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01').defaultHostName)]"
             },
             "foundryEndpoint": {
               "type": "string",

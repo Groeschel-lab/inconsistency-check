@@ -1,13 +1,8 @@
-"""Inconsistency Check - keyless FastAPI backend.
-
-Flags internal logical inconsistencies in clinical text. Authentication to the
-model is KEYLESS (Managed Identity on Azure, `az login` locally) via
-azure-identity - no API keys are handled, stored, or read from Key Vault.
-Submitted text is processed in memory and not persisted.
-"""
+"""FastAPI backend for detecting internal inconsistencies in clinical text."""
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 
@@ -18,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-# Load backend/.env for local development (no-op if python-dotenv is absent or on Azure).
+# Load local settings when python-dotenv is installed.
 try:
     from dotenv import load_dotenv
 
@@ -28,11 +23,13 @@ except ImportError:
 
 ENDPOINT = os.environ.get("AZURE_AI_ENDPOINT", os.environ.get("AZURE_OPENAI_ENDPOINT", "")).rstrip("/")
 DEPLOYMENT = os.environ.get("AZURE_AI_DEPLOYMENT", os.environ.get("AZURE_OPENAI_DEPLOYMENT", ""))
-MODEL_FORMAT = os.environ.get("MODEL_FORMAT", "OpenAI")  # 'Anthropic' routes to /anthropic/v1/messages
+MODEL_FORMAT = os.environ.get("MODEL_FORMAT", "OpenAI")  # Anthropic uses /anthropic/v1/messages.
+INSTITUTION_NAME = os.environ.get("INSTITUTION_NAME", "").strip()
 ALLOWED_ORIGINS = [o for o in os.environ.get("ALLOWED_ORIGINS", "*").split(",") if o] or ["*"]
-TOKEN_SCOPE = "https://ai.azure.com/.default"  # Azure AI Foundry inference (keyless via Managed Identity + RBAC)
+TOKEN_SCOPE = "https://ai.azure.com/.default"  # Azure AI Foundry inference.
 MAX_TOKENS = int(os.environ.get("MAX_COMPLETION_TOKENS", "8000"))
 REQUEST_TIMEOUT = 180
+LOGGER = logging.getLogger(__name__)
 
 _DEFAULT_SYSTEM_PROMPT = """ROLE: Du bist ein System zur Erkennung logischer Unstimmigkeiten in Arztbriefen, um die Qualität zu verbessern.
 
@@ -95,6 +92,7 @@ class AnalyzeRequest(BaseModel):
 @app.get("/api/health")
 def health() -> dict:
     return {"status": "ok", "deployment": DEPLOYMENT, "format": MODEL_FORMAT,
+            "institution": INSTITUTION_NAME,
             "endpoint_configured": bool(ENDPOINT)}
 
 
@@ -110,6 +108,7 @@ def _call_openai(headers: dict, text: str) -> str:
     resp = requests.post(f"{ENDPOINT}/openai/v1/chat/completions", headers=headers,
                          json=body, timeout=REQUEST_TIMEOUT)
     if resp.status_code >= 400:
+        LOGGER.warning("Model request failed: route=openai status=%s", resp.status_code)
         raise HTTPException(502, f"model call failed ({resp.status_code})")
     return ((resp.json().get("choices") or [{}])[0].get("message") or {}).get("content", "")
 
@@ -125,6 +124,7 @@ def _call_anthropic(headers: dict, text: str) -> str:
                          headers={**headers, "anthropic-version": "2023-06-01"},
                          json=body, timeout=REQUEST_TIMEOUT)
     if resp.status_code >= 400:
+        LOGGER.warning("Model request failed: route=anthropic status=%s", resp.status_code)
         raise HTTPException(502, f"model call failed ({resp.status_code})")
     return "".join(p.get("text", "") for p in (resp.json().get("content") or []) if isinstance(p, dict))
 
@@ -132,6 +132,7 @@ def _call_anthropic(headers: dict, text: str) -> str:
 @app.post("/api/analyze")
 def analyze(req: AnalyzeRequest) -> dict:
     if not ENDPOINT or not DEPLOYMENT:
+        LOGGER.error("Model endpoint or deployment is not configured")
         raise HTTPException(500, "AZURE_AI_ENDPOINT / AZURE_AI_DEPLOYMENT not configured")
     text = (req.text or "").strip()
     if not text:
@@ -140,6 +141,7 @@ def analyze(req: AnalyzeRequest) -> dict:
     try:
         content = (_call_anthropic if MODEL_FORMAT.lower() == "anthropic" else _call_openai)(headers, text)
     except requests.RequestException as exc:
+        LOGGER.warning("Model request failed: exception=%s", exc.__class__.__name__)
         raise HTTPException(502, f"model call failed: {exc.__class__.__name__}")
     return {"issues": _extract_issues(content)}
 

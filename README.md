@@ -1,14 +1,16 @@
 # Inconsistency Check
 
-> A **governed, keyless** LLM "logic check" that flags internal inconsistencies in clinical documents (discharge summaries), **one-click deployable** into your own Azure tenant as Infrastructure as Code.
+> A **governed, keyless** LLM "logic check" that flags internal inconsistencies in clinical documents, **one-click deployable** into your own Azure tenant as Infrastructure as Code.
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fhelloworld-germany%2Finconsistency-check%2Fmain%2Finfra%2Fmain.json/uiFormDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fhelloworld-germany%2Finconsistency-check%2Fmain%2Finfra%2FuiFormDefinition.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fgroeschel-lab%2Finconsistency-check%2Fmain%2Finfra%2Fmain.json/uiFormDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fgroeschel-lab%2Finconsistency-check%2Fmain%2Finfra%2FuiFormDefinition.json)
 
 Everything is provisioned in **your** tenant. Authentication is **exclusively Managed Identity + RBAC** - no API keys, no connection strings, no Key Vault required. Submitted text is processed **in memory** and not persisted.
 
-This repository accompanies the case study *"Implementing a Governed LLM Logic Check for Hospital Documentation"* (see [Citation](#citation)).
+This repository accompanies the case study *"Infrastructure as Code for deployment and governance of medical AI"* (see [Citation](#citation)).
 
-> ⚠️ **Not a medical device** (MDR/IVDR). All flagged inconsistencies must be verified by qualified clinicians.
+> **Research prototype.** Use only within an organizationally approved setting;
+> qualified clinicians must review every finding. Submitted text is processed
+> in memory and not persisted.
 
 ---
 
@@ -26,6 +28,12 @@ flowchart LR
 
 ## 1-Click deployment
 
+> **Public repository required.** The deployment button loads the ARM template,
+> portal form, and release package from GitHub without repository authentication.
+> It therefore works only after this repository is public and a release provides
+> the `app.zip` asset. During private staging, code can be uploaded and reviewed
+> normally, but the deployment button will return `404`.
+
 ### Before the click
 | Requirement | Why |
 |---|---|
@@ -35,19 +43,22 @@ flowchart LR
 ### Click & wizard
 1. Click **Deploy to Azure**.
 2. Choose subscription + resource group + region (default `swedencentral`, or `germanywestcentral` / `switzerlandnorth`). Claude Opus (the default model) is only in `swedencentral`.
-3. Set a short unique `nameSuffix` (3-8 lowercase, e.g. `logic1`).
+3. Set a short unique `nameSuffix` (3-8 lowercase, e.g. `logic1`). Optionally
+  add the institution display name used in the AI model access indicator.
 4. **Model** tab: pick one of the paper's five models (see [Models](#models)); capacity is clamped to a safe per-model maximum.
-5. **Access** tab: choose **No sign-in** or **Require Microsoft Entra ID sign-in** (see [Access & authentication](#access--authentication)).
+5. **Access** tab: use the recommended **Microsoft Entra ID sign-in** default,
+   or deliberately choose **No sign-in** if your IT team will control network
+   access separately (see [Access & authentication](#access--authentication)).
 6. *Review + create* (~10-15 min).
 
 ### After deployment
 Open the frontend URL from the deployment outputs and paste clinical text - the app calls the model via its managed identity (no keys to configure).
 
 ## Access & authentication
-The **Access** tab offers two one-click options:
+The **Access** tab offers two options:
 
-- **No sign-in (restrict by network).** No login gate; control who can reach the app at the network layer (private endpoints, IP allow-list). Suitable when the app is only reachable from inside the hospital network.
-- **Require Microsoft Entra ID sign-in.** Built-in authentication (Easy Auth) requires every visitor to sign in with your tenant's Microsoft Entra ID before the app loads. Sign-in is **keyless and set-and-forget**: it uses a managed identity as a federated credential, so there is no client secret to rotate.
+- **Require Microsoft Entra ID sign-in (recommended and selected by default).** Built-in authentication (Easy Auth) requires every visitor to sign in with your tenant's Microsoft Entra ID before the app loads. Sign-in is **keyless and set-and-forget**: it uses a managed identity as a federated credential, so there is no client secret to rotate.
+- **No sign-in (configure network access separately).** The template does not add an inbound network restriction to the Function App. Without controls configured by the deploying IT team, the app is publicly reachable. Use this option only for an approved evaluation environment or when separate network controls are in place.
 
 For the Entra option a tenant administrator does a one-time setup:
 
@@ -73,7 +84,24 @@ Nothing expires afterwards. Access to the model stays keyless either way; this g
 The frontend is built for hands-free use from other software (e.g. speech-recognition / dictation tools):
 - **Paste to run.** Pressing **Ctrl + V** anywhere on the page fills the editor and runs the check automatically - no button click. A dictation tool can copy the note to the clipboard, open the page, and send Ctrl + V to get findings with zero further interaction.
 - **Auto-run on open.** Opening the page with `?autorun=1` reads the clipboard and runs on load (best-effort - browsers may require the site to have clipboard permission; Ctrl + V is the reliable trigger).
+- **Compact companion window.** Use the small-window control in the header or
+  open `?compact=1` from the calling application. Combine both modes as
+  `?compact=1&autorun=1` for a side-by-side dictation workflow.
 - **API.** Any system can POST text to `/api/analyze` directly (see [`examples/`](examples/)).
+
+Browsers only honor requested popup dimensions after a user action. A web-based
+integration can request a reusable 540 x 760 pixel companion window:
+
+```javascript
+window.open(
+  "https://func-lc-<nameSuffix>.azurewebsites.net/?compact=1",
+  "inconsistency-check-compact",
+  "popup=yes,width=540,height=760,resizable=yes,scrollbars=yes"
+);
+```
+
+A native clinical application or managed WebView should control the window size
+itself and load the same `?compact=1` URL.
 
 ## Architecture (keyless by design)
 - **Managed Identity + RBAC** for every model call - the Function App's managed identity holds *Cognitive Services OpenAI User* and *Cognitive Services User* on the Foundry account (assigned in Bicep). No API keys, no Key Vault, no SQL.
@@ -81,7 +109,7 @@ The frontend is built for hands-free use from other software (e.g. speech-recogn
 - **Infrastructure as Code** - everything in [`infra/main.bicep`](infra/main.bicep); one declarative deployment, reproducible across institutions.
 
 ## Models
-The tool deploys **one** model from the study's Phase-2 panel, chosen in the wizard (Bicep parameter `modelProfile`). Switching models is a **re-deploy**, no code change. **Claude Opus 4.7 is the default** - it is the paper's validation reference.
+The tool deploys **one** model from the study's validation phase panel, chosen in the wizard (Bicep parameter `modelProfile`). Switching models is a **re-deploy**, no code change. **Claude Opus 4.7 is the default** - it is the paper's validation reference.
 
 | `modelProfile` | Model | Route | Region | Notes |
 |---|---|---|---|---|
@@ -104,25 +132,91 @@ uvicorn backend.main:app --reload
 Open http://127.0.0.1:8000 and paste text, or try the [`examples/`](examples/).
 
 ## Try it with the examples
-Two synthetic, fictional, PHI-free discharge letters with planted inconsistencies are in [`examples/`](examples/) - paste one into the app to see the output, or use them for a smoke test.
+The repository contains two synthetic, fictional, PHI-free German reference
+letters and English convenience translations. Each letter contains planted
+inconsistencies and has a corresponding expected-findings file.
 
-## Reproducing deployment timing
-The paper benchmark is implemented in [`deployment-benchmark.ipynb`](deployment-benchmark.ipynb). In Sweden Central, each of the five paper models is deployed once per randomized block for five blocks (25 fresh, serial attempts). Serial execution prevents benchmark-induced quota or control-plane contention; block randomization reduces order and time-of-day bias.
+| German reference | English translation |
+|---|---|
+| [`example1_discharge_letter.txt`](examples/example1_discharge_letter.txt) | [`example1_discharge_letter_en.txt`](examples/example1_discharge_letter_en.txt) |
+| [`example2_discharge_letter.txt`](examples/example2_discharge_letter.txt) | [`example2_discharge_letter_en.txt`](examples/example2_discharge_letter_en.txt) |
 
-Open the notebook with a Python kernel and run the cells in order. The default `EXECUTE = False` performs only the preflight checks and displays the deterministic run order. A campaign requires a clean, pushed protocol version and an explicit change to `EXECUTE = True`.
+The German examples are the reference artifacts. The English files preserve the
+planted contradictions but were not used in the study. See
+[`examples/README.md`](examples/README.md) for the expected findings and API use.
 
-There is one reported endpoint: the first valid result from `POST /api/analyze` using a synthetic, PHI-free probe. The clock starts immediately before Azure CLI submits the commit-pinned GitHub ARM template and stops when that model result arrives. This demonstrates operational readiness of the app, private networking, managed identity, RBAC, model deployment, and inference in one clinically understandable measure. Preflight and cleanup are excluded.
+## Reference prompt and English alternative
+The built-in German `v4_judge` prompt in [`backend/main.py`](backend/main.py) is
+the exact reference prompt used for the paper. Leave **Custom system prompt**
+empty in the deployment wizard to use it.
 
-The checkpointed JSON report contains every attempt plus, per model, the arithmetic mean, sample standard deviation, range, and all five observations. Failures and 30-minute timeouts remain in the denominator and are never replaced. The report also records the run order and seed, timestamps, measurement site, exact Git commit and template hash, release-package hash, and runtime environment.
+<details>
+<summary>German reference prompt used in the study</summary>
 
-For a protocol-compliant run, use a clean, pushed checkout; retain the prespecified settings; record the approximate client location and network type; ensure quota for all models; and avoid unrelated deployments in the subscription. The notebook verifies the pinned GitHub inputs before measurement. After each attempt, it removes the model deployment, deletes and purges the Foundry account to release quota, and then synchronously deletes the remaining resource group and subscription deployment record before starting the next attempt. A completed campaign therefore leaves no benchmark resources or deployment records. An interrupted process may require the notebook's recovery cell.
+```text
+ROLE: Du bist ein System zur Erkennung logischer Unstimmigkeiten in Arztbriefen, um die Qualität zu verbessern.
 
-The experiment quantifies automated deployment-to-model-response time after the equivalent of the portal's final **Create** action. It does not measure portal form entry or establish usability for technically inexperienced clinicians; that requires a separate user study.
+AUFGABE: Analysiere den folgenden Arztbrief ausschliesslich auf interne logische Unstimmigkeiten (Widersprüche, zeitliche Inkonsistenzen, widersprüchliche Angaben). Es geht nicht um stilistische oder formale Aspekte. Es geht vor allem um offensichtliche Unstimmigkeiten, die auch von Fachfremden gefunden werden könnten.
 
-The [final descriptive results](deployment-benchmark-results/final/report.md) comprise 25 values (24 observed deployments and one labeled synthetic Claude value). The median was 237.9 seconds (range 150.7-953.1 seconds), with differing dispersion across model configurations.
+VORGEHEN:
+1. Lies den Arztbrief sorgfältig und vollständig.
+2. Identifiziere alle Stellen, an denen sich der Brief intern widerspricht.
+3. Wende strenge logische Analyse (Aussagenlogik) auf den vorliegenden Text an. Du solltest kein medizinisches Wissen oder Leitlinien benötigen.
+
+KATEGORIEN (genau eine pro Unstimmigkeit): Inhalt, Zeitlich, Struktur, Sprachlich, Sonstige.
+Es ist ausdrücklich NICHT erforderlich, in jeder Kategorie eine Unstimmigkeit zu finden. Viele Arztbriefe enthalten keine oder nur in einzelnen Kategorien Unstimmigkeiten. Erfinde keine Befunde, nur um Kategorien zu füllen.
+
+SCHWEREGRAD (1-9): 1-3 geringfügig ohne klinische Konsequenz; 4-6 relevanter Widerspruch mit potentieller Auswirkung; 7-9 schwerwiegend mit klinischer Relevanz (9 nur eindeutig kritisch). Sei konservativ.
+
+REGELN:
+- Nur eindeutige, signifikante Unstimmigkeiten auflisten; unsichere/triviale weglassen.
+- Für jede Unstimmigkeit relevante Textstellen zitieren, Korrekturvorschlag und klinische Auswirkung angeben.
+
+Antworte ausschliesslich als JSON-Objekt exakt in dieser Form:
+{"issues": [{"description": str, "context": str, "category": "Inhalt|Zeitlich|Struktur|Sprachlich|Sonstige", "severity": 1-9, "rationale": str, "clinical_impact": str, "correction": str}]}
+Wenn keine Unstimmigkeit vorliegt, gib {"issues": []} zurück.
+```
+</details>
+
+For English-language documents, paste the following convenience translation
+into **Model > Custom system prompt** during deployment, or set the local
+`SYSTEM_PROMPT` environment variable. This translation was not used or validated
+in the study, so results obtained with it do not reproduce the paper's results.
+
+<details>
+<summary>English convenience translation</summary>
+
+```text
+ROLE: You are a system for detecting logical inconsistencies in discharge summaries to improve their quality.
+
+TASK: Analyze the following discharge summary exclusively for internal logical inconsistencies (contradictions, temporal inconsistencies, and conflicting statements). Do not assess stylistic or formal aspects. Focus on clear inconsistencies that could also be identified by non-specialists.
+
+PROCEDURE:
+1. Read the discharge summary carefully and completely.
+2. Identify every passage in which the document contradicts itself.
+3. Apply strict logical analysis (propositional logic) to the provided text. Medical knowledge or clinical guidelines should not be required.
+
+CATEGORIES (exactly one per inconsistency): Content, Temporal, Structural, Linguistic, Other.
+It is explicitly NOT necessary to find an inconsistency in every category. Many discharge summaries contain no inconsistencies or only inconsistencies in individual categories. Do not invent findings to fill categories.
+
+SEVERITY (1-9): 1-3 minor without clinical consequence; 4-6 relevant contradiction with potential impact; 7-9 serious with clinical relevance (use 9 only when clearly critical). Be conservative.
+
+RULES:
+- List only clear, significant inconsistencies; omit uncertain or trivial findings.
+- For each inconsistency, quote the relevant passages and provide a suggested correction and the clinical impact.
+
+Respond exclusively with a JSON object in exactly this form:
+{"issues": [{"description": str, "context": str, "category": "Content|Temporal|Structural|Linguistic|Other", "severity": 1-9, "rationale": str, "clinical_impact": str, "correction": str}]}
+If there is no inconsistency, return {"issues": []}.
+```
+</details>
 
 ## Research & evaluation
-This repository is the **deployable tool** only. The study's evaluation pipeline and PHI-free aggregate metrics are maintained separately and are available from the authors on reasonable request (see the paper). No patient data is included here.
+This repository is the **deployable tool** and contains the artifacts required
+to inspect, deploy, and test it. The study's evaluation pipeline,
+deployment benchmark, and aggregate metrics are maintained separately and are
+available from the authors on reasonable request (see the paper). No patient
+data is included here.
 
 ## Citation
 See [`CITATION.cff`](CITATION.cff). Please cite both the software and the accompanying paper.

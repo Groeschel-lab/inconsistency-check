@@ -1,0 +1,26 @@
+Short discharge summary
+
+Department of Internal Medicine, Sample Hospital, Sampletown
+Patient: Ms Erika Musterfrau, born 12 May 1962
+Admission: 02 June 2024     Discharge: 07 June 2024
+
+Diagnoses:
+1. Uncomplicated urinary tract infection
+2. Type 2 diabetes mellitus
+
+Course:
+The patient was admitted with dysuria and left-sided flank pain. Urine culture
+grew E. coli. Despite a known ciprofloxacin intolerance, empirical treatment
+with oral ciprofloxacin 500 mg was started. The patient remained afebrile
+throughout the entire inpatient stay; at admission, fever reached 38.8 degrees C.
+Symptoms improved markedly during treatment.
+
+Medication at discharge:
+- Metformin 1000 mg  1-0-1
+- Ciprofloxacin 500 mg  1-0-1  for 5 days
+
+Follow-up:
+The primary care physician should check renal function and inflammatory markers
+in one week.
+
+Kind regards

@@ -7,5 +7,5 @@ In short: be respectful and constructive. Harassment and discriminatory behavior
 are not tolerated.
 
 To report unacceptable behavior, contact the maintainers at
-**[maintainer contact - fill before release]**. Reports will be handled
+**matthias.groeschel@charite.de**. Reports will be handled
 confidentially.

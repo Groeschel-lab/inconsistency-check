@@ -1,8 +1,7 @@
 name: release
 
-# Builds a self-contained Azure Functions app.zip (Python deps vendored) and
-# publishes it as a GitHub release asset, so WEBSITE_RUN_FROM_PACKAGE runs the
-# app with no build step - the piece that makes the 1-click Deploy button work.
+# Build a self-contained package for WEBSITE_RUN_FROM_PACKAGE.
+# Tagged builds publish app.zip as a GitHub release asset.
 
 on:
   push:

@@ -1,47 +1,47 @@
-// Core infrastructure for Inconsistency Check:
-// Azure Functions (Elastic Premium, Linux, Python), keyless Managed-Identity
-// storage over Private Endpoints + VNet, App Insights, and the AI Foundry model
-// (delegated to ./llm.bicep). All model + storage access is MI + RBAC - no keys,
-// no Key Vault. End-user Entra auth is added by a separate module.
+// Deploy the Function App, private networking, model module, identities, and RBAC.
 
-@description('Azure region for all resources.')
+@description('Azure region (EU). Claude Opus 4.7 (the paper reference model) is only in swedencentral.')
 param location string
 
-@description('Unique suffix for globally unique names (3-8 lowercase).')
+@description('Short unique suffix for resource names (3-8 lowercase letters/digits, e.g. logic1).')
 @minLength(3)
 @maxLength(8)
 param nameSuffix string
 
-@description('Which of the paper\'s five models to deploy.')
+@description('Which of the paper\'s five models to deploy. Claude Opus 4.7 is the validation reference.')
 @allowed([ 'claude-opus-4-7', 'gpt-5.5', 'mistral-large-3', 'deepseek-v3.2', 'gpt-5.4-nano' ])
 param modelProfile string
 
-@description('Requested model capacity (thousands of tokens/min); clamped per model.')
+@description('Requested model capacity (thousands of tokens/min); clamped to a safe per-model maximum.')
 @minValue(1)
 param modelCapacity int = 20
 
-@description('Organization name for Anthropic (Claude) model provider data.')
+@description('Organization name for the model provider data.')
 param organizationName string = 'Healthcare organization'
 
-@description('ISO 3166 alpha-2 country code for Anthropic model provider data.')
+@description('ISO 3166 alpha-2 country code for the model provider data.')
 param countryCode string = 'DE'
 
-@description('Industry for Anthropic model provider data.')
+@description('Industry for the model provider data.')
 param industry string = 'Healthcare'
 
-@description('Optional system-prompt override (empty = built-in v4_judge default).')
+@description('Optional institution name displayed in the frontend AI model access indicator.')
+@maxLength(60)
+param institutionName string = ''
+
+@description('Optional. Override the built-in German v4_judge system prompt. Empty = paper default.')
 param systemPrompt string = ''
 
-@description('Public HTTPS URL of the Function App .zip to run via WEBSITE_RUN_FROM_PACKAGE.')
+@description('Application package (zip). Defaults to the research GitHub release build.')
 param packageUri string
 
-@description('Entra app registration (client) ID for end-user sign-in. Empty = no user auth (network-restricted only). You create the app registration yourself - see README.')
+@description('Optional, recommended. Entra app registration (client) ID to require user sign-in. Empty = no user auth. Create the app registration yourself - see README.')
 param entraClientId string = ''
 
 @description('Entra tenant ID for sign-in. Defaults to the deployment tenant.')
 param entraTenantId string = tenant().tenantId
 
-// Built-in role definition IDs
+// Built-in role definition IDs.
 var storageBlobDataOwnerRole = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
 var storageQueueDataContributorRole = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
 var storageTableDataContributorRole = '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
@@ -55,7 +55,7 @@ var foundryPrivateDnsZones = [
   'privatelink.services.ai.azure.com'
 ]
 
-// Storage (Functions runtime - keyless, no shared keys)
+// Function runtime storage.
 resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: 'stlc${nameSuffix}'
   location: location
@@ -73,7 +73,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
-// VNet (Function App integration + private endpoints)
+// Function VNet and private endpoint subnet.
 resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
   name: 'vnet-lc-${nameSuffix}'
   location: location
@@ -101,7 +101,7 @@ resource subnetPe 'Microsoft.Network/virtualNetworks/subnets@2024-01-01' = {
   dependsOn: [ subnetApp ]
 }
 
-// App Service Plan (Elastic Premium - required for keyless storage + VNet)
+// Elastic Premium supports VNet integration and keyless storage.
 resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: 'plan-lc-${nameSuffix}'
   location: location
@@ -110,7 +110,7 @@ resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
   properties: { reserved: true }
 }
 
-// App Insights
+// Application Insights telemetry.
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: 'appi-lc-${nameSuffix}'
   location: location
@@ -118,7 +118,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   properties: { Application_Type: 'web', Request_Source: 'rest' }
 }
 
-// AI Foundry model (AIServices account + one deployment)
+// Foundry account and model deployment.
 module llm './llm.bicep' = {
   name: 'llm-${nameSuffix}'
   params: {
@@ -132,12 +132,12 @@ module llm './llm.bicep' = {
   }
 }
 
-// Handle to the AIServices account so RBAC can be scoped to it.
+// Scope model role assignments to the Foundry account.
 resource llmAccount 'Microsoft.CognitiveServices/accounts@2024-10-01' existing = {
   name: 'aif-${nameSuffix}'
 }
 
-// Private Endpoints + DNS (Storage over VNet)
+// Private endpoints and DNS for Function storage.
 resource storageDnsZones 'Microsoft.Network/privateDnsZones@2020-06-01' = [for sub in storageSubResources: {
   name: 'privatelink.${sub}.${environment().suffixes.storage}'
   location: 'global'
@@ -178,7 +178,7 @@ resource storagePeDnsGroups 'Microsoft.Network/privateEndpoints/privateDnsZoneGr
   }
 }]
 
-// Private Endpoint + DNS (AI Foundry model over VNet) - keeps clinical text on the tenant network
+// Private endpoint and DNS for Foundry.
 resource foundryDnsZonesRes 'Microsoft.Network/privateDnsZones@2020-06-01' = [for z in foundryPrivateDnsZones: {
   name: z
   location: 'global'
@@ -225,11 +225,13 @@ resource foundryPeDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGro
 
 // Function App
 var promptSetting = empty(systemPrompt) ? [] : [ { name: 'SYSTEM_PROMPT', value: systemPrompt } ]
+var institutionSetting = empty(institutionName) ? [] : [ { name: 'INSTITUTION_NAME', value: institutionName } ]
+var functionAppName = 'func-lc-${nameSuffix}'
 
-// End-user Entra sign-in (Easy Auth) is enabled when a client ID is supplied.
+// Enable Easy Auth when a client ID is supplied.
 var authEnabled = !empty(entraClientId)
 
-// Dedicated identity used only as the Easy Auth federated credential (keyless, no client secret).
+// Identity used by the Easy Auth federated credential.
 resource authIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = if (authEnabled) {
   name: 'id-auth-${nameSuffix}'
   location: location
@@ -238,7 +240,7 @@ resource authIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-
 var authAppSetting = authEnabled ? [ { name: 'OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID', value: authIdentity!.properties.clientId } ] : []
 
 resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
-  name: 'func-lc-${nameSuffix}'
+  name: functionAppName
   location: location
   kind: 'functionapp,linux'
   identity: authEnabled ? {
@@ -257,6 +259,10 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
       linuxFxVersion: 'Python|3.11'
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
+      cors: {
+        allowedOrigins: [ 'https://${functionAppName}.azurewebsites.net' ]
+        supportCredentials: false
+      }
       appSettings: union([
         { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
         { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'python' }
@@ -264,22 +270,21 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'AzureWebJobsStorage__accountName', value: storage.name }
         { name: 'AzureWebJobsStorage__credential', value: 'managedidentity' }
         { name: 'WEBSITE_RUN_FROM_PACKAGE', value: packageUri }
-        // Route only private traffic through the VNet so the package download reaches the public zip URL.
+        // Keep public package downloads outside VNet routing.
         { name: 'WEBSITE_VNET_ROUTE_ALL', value: '0' }
         { name: 'SCM_DO_BUILD_DURING_DEPLOYMENT', value: 'false' }
-        // Elastic Premium: skip the pre-warmed placeholder for a reliable cold start.
+        // Disable the pre-warmed placeholder for reliable startup.
         { name: 'WEBSITE_USE_PLACEHOLDER', value: '0' }
         { name: 'AZURE_AI_ENDPOINT', value: llm.outputs.endpoint }
         { name: 'AZURE_AI_DEPLOYMENT', value: llm.outputs.deploymentName }
         { name: 'MODEL_FORMAT', value: llm.outputs.modelFormat }
-      ], promptSetting, authAppSetting)
+      ], promptSetting, institutionSetting, authAppSetting)
     }
   }
   dependsOn: [ storagePeDnsGroups ]
 }
 
-// End-user Entra sign-in (Easy Auth). The operator creates the app registration and a
-// federated credential trusting the identity above (see README); no client secret is used.
+// Easy Auth uses the operator-managed app registration documented in the README.
 var effectiveTenantId = empty(entraTenantId) ? tenant().tenantId : entraTenantId
 
 resource authSettings 'Microsoft.Web/sites/config@2023-12-01' = if (authEnabled) {
@@ -306,13 +311,13 @@ resource authSettings 'Microsoft.Web/sites/config@2023-12-01' = if (authEnabled)
       }
     }
     login: {
-      // Disabled: the token store needs writable storage; this app only gates sign-in and stores no tokens.
+      // The app does not use the Easy Auth token store.
       tokenStore: { enabled: false }
     }
   }
 }
 
-// RBAC (Function MI -> storage + Foundry)
+// Function identity role assignments.
 resource storageBlobRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(storage.id, functionApp.id, storageBlobDataOwnerRole)
   scope: storage
@@ -363,7 +368,6 @@ resource llmCognitiveRole 'Microsoft.Authorization/roleAssignments@2022-04-01' =
   }
 }
 
-// Outputs
 output functionAppName string = functionApp.name
 output functionAppUrl string = 'https://${functionApp.properties.defaultHostName}'
 output foundryEndpoint string = llm.outputs.endpoint

@@ -1,8 +1,4 @@
-// Inconsistency Check - subscription-scoped, keyless one-click deployment.
-// Azure Functions (Elastic Premium) hosting the logic-check app; keyless
-// Managed-Identity + RBAC to the model and storage; storage behind Private
-// Endpoints. Supports the Claude Opus 4.7 reference model (Anthropic route)
-// and the study's other models, plus optional end-user Entra authentication.
+// Subscription-scoped deployment for the Function App and model infrastructure.
 targetScope = 'subscription'
 
 @description('Azure region (EU). Claude Opus 4.7 (the paper reference model) is only in swedencentral.')
@@ -23,26 +19,30 @@ param modelProfile string = 'claude-opus-4-7'
 @maxValue(500)
 param modelCapacity int = 20
 
-@description('Organization name for Anthropic (Claude) model provider data (marketplace requirement for Claude).')
+@description('Organization name for the model provider data.')
 param organizationName string = 'Healthcare organization'
 
-@description('ISO 3166 alpha-2 country code for Anthropic model provider data.')
+@description('ISO 3166 alpha-2 country code for the model provider data.')
 param countryCode string = 'DE'
 
-@description('Industry for Anthropic model provider data.')
+@description('Industry for the model provider data.')
 param industry string = 'Healthcare'
 
-@description('Optional. Override the built-in v4_judge system prompt. Empty = paper default.')
+@description('Optional institution name displayed in the frontend AI model access indicator.')
+@maxLength(60)
+param institutionName string = ''
+
+@description('Optional. Override the built-in German v4_judge system prompt. Empty = paper default.')
 param systemPrompt string = ''
 
-@description('Optional. Entra app registration (client) ID to require user sign-in. Empty = no user auth. Create the app registration yourself - see README.')
+@description('Optional, recommended. Entra app registration (client) ID to require user sign-in. Empty = no user auth. Create the app registration yourself - see README.')
 param entraClientId string = ''
 
 @description('Entra tenant ID for sign-in. Defaults to the deployment tenant.')
 param entraTenantId string = tenant().tenantId
 
-@description('Application package (zip). Defaults to the latest GitHub release build.')
-param packageUri string = 'https://github.com/helloworld-germany/inconsistency-check/releases/latest/download/app.zip'
+@description('Application package (zip). Defaults to the research GitHub release build.')
+param packageUri string = 'https://github.com/groeschel-lab/inconsistency-check/releases/latest/download/app.zip'
 
 @description('Resource group to create/use.')
 param resourceGroupName string = 'rg-logiccheck-${nameSuffix}'
@@ -63,6 +63,7 @@ module core 'modules/core.bicep' = {
     organizationName: organizationName
     countryCode: countryCode
     industry: industry
+    institutionName: institutionName
     systemPrompt: systemPrompt
     packageUri: packageUri
     entraClientId: entraClientId

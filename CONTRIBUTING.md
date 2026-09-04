@@ -7,8 +7,8 @@ keyless LLM logic check) - not the research pipeline.
 See [Local development](README.md#local-development) in the README.
 
 ## Before opening a pull request
-- CI must pass: the backend byte-compiles and imports, `infra/main.bicep` builds,
-  and all JSON files parse.
+- CI must pass: the backend byte-compiles and imports, the reference-prompt test
+  passes, `infra/main.bicep` builds, and all JSON files parse.
 - If you change **`infra/main.bicep`**, rebuild the ARM template and commit both:
   ```bash
   az bicep build --file infra/main.bicep --outfile infra/main.json

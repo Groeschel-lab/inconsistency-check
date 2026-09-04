@@ -1,6 +1,4 @@
-"""Azure Functions entry point: serves the FastAPI app (backend.main) through the
-ASGI adapter. Uses the function.json (host-indexed) model so the app runs reliably
-from a read-only run-from-package mount, where Python worker indexing does not."""
+"""Expose the FastAPI app through Azure Functions ASGI middleware."""
 import azure.functions as func
 
 from backend.main import app as fastapi_app

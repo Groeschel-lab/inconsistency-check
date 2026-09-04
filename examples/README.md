@@ -1,18 +1,20 @@
 # Examples
 
-**Synthetic, fictional, PHI-free** German discharge letters with deliberately
-planted internal inconsistencies. They contain **no real patient data** - all
-names, dates, and values are invented - and exist only to demo and smoke-test
-the tool.
+These **synthetic, fictional, PHI-free** discharge summaries contain no real
+patient data. All names, dates, and values are invented.
 
-| File | Planted issues |
-|---|---|
-| [`example1_discharge_letter.txt`](example1_discharge_letter.txt) | admission-after-discharge date, CRP "fall" to a higher value, antibiotic despite a documented penicillin allergy, an implausible drug-dose unit, a gender mismatch, a follow-up date in the past |
-| [`example2_discharge_letter.txt`](example2_discharge_letter.txt) | drug given despite a documented intolerance, a contradictory fever course |
+The German files are the reference examples. The English files are convenience
+translations for international users and were not used in the study.
 
-Each `*_expected_findings.json` lists the **planted** inconsistencies. They are
-illustrative - a capable model should surface at least these, but exact wording,
-count, and severity vary by model.
+| Example | Language | Planted issues |
+|---|---|---|
+| [`example1_discharge_letter.txt`](example1_discharge_letter.txt) | German reference | admission after discharge, CRP "decrease" to a higher value, penicillin despite allergy, implausible dose unit, gender mismatch, follow-up before discharge |
+| [`example1_discharge_letter_en.txt`](example1_discharge_letter_en.txt) | English translation | translated equivalent of German example 1 |
+| [`example2_discharge_letter.txt`](example2_discharge_letter.txt) | German reference | ciprofloxacin despite intolerance, contradictory fever course |
+| [`example2_discharge_letter_en.txt`](example2_discharge_letter_en.txt) | English translation | translated equivalent of German example 2 |
+
+Each `*_expected_findings*.json` file lists the planted inconsistencies. Exact
+wording, count, and severity can vary by model.
 
 ## Use
 

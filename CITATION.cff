@@ -3,7 +3,7 @@ message: "If you use this software, please cite both the software and the accomp
 title: "Inconsistency Check"
 abstract: "A governed, keyless, one-click-deployable LLM logic check that flags internal inconsistencies in clinical documents."
 type: software
-repository-code: "https://github.com/helloworld-germany/inconsistency-check"
+repository-code: "https://github.com/groeschel-lab/inconsistency-check"
 license: MIT
 authors:
   - family-names: Vogel
@@ -22,11 +22,9 @@ authors:
     given-names: Leif Erik
   - family-names: Gröschel
     given-names: Matthias I.
-# NOTE: finalize the author list to match the published paper before release (confirm co-authors, order, ORCIDs, affiliations).
 preferred-citation:
   type: article
-  title: "Implementing a Governed LLM Logic Check for Hospital Documentation: A Case Study"
-  journal: "NEJM AI"
+  title: "Infrastructure as Code for deployment and governance of medical AI"
   year: 2026
   authors:
     - family-names: Vogel

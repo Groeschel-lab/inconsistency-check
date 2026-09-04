@@ -2,12 +2,11 @@
 
 Work through this before making the repository public / tagging a public release.
 
-## Repository move + URL flip
-The interim staging owner is `helloworld-germany`; the final home is
-**`groeschel-lab/inconsistency-check`**. Before public release, flip the owner in
-every hard-coded URL:
-- [ ] `README.md` - the **Deploy to Azure** button (two `raw.githubusercontent.com` URLs)
-- [ ] `infra/main.bicep` - `packageUri` default (GitHub releases URL)
+## Publication repository
+The public home is **`groeschel-lab/inconsistency-check`**. Before each public
+release, verify the owner in every hard-coded URL:
+- [ ] `README.md` - the **Deploy to Azure** button
+- [ ] `infra/main.bicep` and generated `infra/main.json` - `packageUri` default
 - [ ] `CITATION.cff` - `repository-code`
 - [ ] The paper's *Code Availability* statement
 
@@ -24,5 +23,5 @@ every hard-coded URL:
 
 ## Finalize metadata
 - [ ] `CITATION.cff` author list matches the published paper (co-authors, order, ORCIDs, affiliations).
-- [ ] Fill the `SECURITY.md` and `CODE_OF_CONDUCT.md` contact placeholders.
-- [ ] Confirm `LICENSE` and the "not a medical device" disclaimers are present.
+- [ ] Verify the public contacts in `SECURITY.md` and `CODE_OF_CONDUCT.md`.
+- [ ] Confirm `LICENSE` and the intended-use statements have been reviewed by the responsible organization.

@@ -34,6 +34,18 @@
                 "regex": "^[a-z0-9]{3,8}$",
                 "validationMessage": "Use 3-8 lowercase letters or digits."
               }
+            },
+            {
+              "name": "institutionName",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Institution display name (optional)",
+              "defaultValue": "",
+              "toolTip": "Shown in the AI model access indicator, for example: Sample Hospital. Empty uses a generic institution-controlled label.",
+              "constraints": {
+                "required": false,
+                "regex": "^.{0,60}$",
+                "validationMessage": "Use no more than 60 characters."
+              }
             }
           ]
         },
@@ -82,7 +94,7 @@
               "visible": true,
               "options": {
                 "icon": "Info",
-                "text": "The tool uses the study's v4_judge system prompt by default. Leave the box below empty to keep it, or paste an alternative to override."
+                "text": "The study's German v4_judge system prompt is the default. Leave the box empty to reproduce the paper, or paste an alternative such as the English translation in the README."
               }
             },
             {
@@ -91,7 +103,7 @@
               "label": "Custom system prompt (optional)",
               "multiLine": true,
               "defaultValue": "",
-              "toolTip": "Optional. Overrides the built-in v4_judge prompt. Empty = paper default.",
+              "toolTip": "Overrides the built-in German v4_judge prompt. Empty = paper default.",
               "constraints": { "required": false }
             }
           ]
@@ -106,20 +118,20 @@
               "visible": true,
               "options": {
                 "icon": "Info",
-                "text": "Choose how end users reach the app. 'No sign-in' relies on network restrictions (private endpoints / IP allow-list). 'Require Microsoft Entra ID' turns on built-in sign-in (Easy Auth); an administrator creates the app registration first - see the README."
+                "text": "Microsoft Entra ID sign-in is the recommended default. 'No sign-in' leaves the app publicly reachable unless your IT team configures network access separately; this template does not add an inbound network restriction."
               }
             },
             {
               "name": "authMode",
               "type": "Microsoft.Common.OptionsGroup",
               "label": "User sign-in",
-              "defaultValue": "No sign-in (restrict by network)",
+              "defaultValue": "entra",
               "toolTip": "Whether visitors must sign in with Microsoft Entra ID before using the app.",
               "constraints": {
                 "required": true,
                 "allowedValues": [
-                  { "label": "No sign-in (restrict by network)", "value": "none" },
-                  { "label": "Require Microsoft Entra ID sign-in", "value": "entra" }
+                  { "label": "Require Microsoft Entra ID sign-in (recommended)", "value": "entra" },
+                  { "label": "No sign-in (configure network access separately)", "value": "none" }
                 ]
               }
             },
@@ -154,6 +166,7 @@
         "parameters": {
           "location": "[steps('basics').scope.location.name]",
           "nameSuffix": "[steps('basics').nameSuffix]",
+          "institutionName": "[steps('basics').institutionName]",
           "modelProfile": "[steps('model').modelProfile]",
           "modelCapacity": "[steps('model').modelCapacity]",
           "systemPrompt": "[steps('model').systemPrompt]",
