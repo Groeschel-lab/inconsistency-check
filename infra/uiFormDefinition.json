@@ -1,0 +1,179 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2021-09-09/uiFormDefinition.schema.json",
+  "view": {
+    "kind": "Form",
+    "properties": {
+      "title": "Inconsistency Check",
+      "steps": [
+        {
+          "name": "basics",
+          "label": "Basics",
+          "elements": [
+            {
+              "name": "scope",
+              "type": "Microsoft.Common.ResourceScope",
+              "location": {
+                "resourceTypes": [
+                  "Microsoft.CognitiveServices/accounts",
+                  "Microsoft.Web/sites"
+                ],
+                "allowedValues": [
+                  "swedencentral",
+                  "germanywestcentral",
+                  "switzerlandnorth"
+                ]
+              }
+            },
+            {
+              "name": "nameSuffix",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Name suffix",
+              "toolTip": "3-8 lowercase letters/digits, unique in your subscription (e.g. logic1).",
+              "constraints": {
+                "required": true,
+                "regex": "^[a-z0-9]{3,8}$",
+                "validationMessage": "Use 3-8 lowercase letters or digits."
+              }
+            },
+            {
+              "name": "institutionName",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Institution display name (optional)",
+              "defaultValue": "",
+              "toolTip": "Shown in the AI model access indicator, for example: Sample Hospital. Empty uses a generic institution-controlled label.",
+              "constraints": {
+                "required": false,
+                "regex": "^.{0,60}$",
+                "validationMessage": "Use no more than 60 characters."
+              }
+            }
+          ]
+        },
+        {
+          "name": "model",
+          "label": "Model",
+          "elements": [
+            {
+              "name": "modelInfo",
+              "type": "Microsoft.Common.InfoBox",
+              "visible": true,
+              "options": {
+                "icon": "Info",
+                "text": "Pick a model profile. You can switch models later by re-deploying - no code change."
+              }
+            },
+            {
+              "name": "modelProfile",
+              "type": "Microsoft.Common.DropDown",
+              "label": "Model",
+              "defaultValue": "Claude Opus 4.7 - validation reference (swedencentral only)",
+              "toolTip": "Which of the paper's five models the logic check runs on.",
+              "constraints": {
+                "required": true,
+                "allowedValues": [
+                  { "label": "Claude Opus 4.7 - validation reference (swedencentral only)", "value": "claude-opus-4-7" },
+                  { "label": "GPT-5.5", "value": "gpt-5.5" },
+                  { "label": "Mistral Large 3 (EU provider)", "value": "mistral-large-3" },
+                  { "label": "DeepSeek V3.2 (lowest cost)", "value": "deepseek-v3.2" },
+                  { "label": "GPT-5.4-nano (fastest OpenAI)", "value": "gpt-5.4-nano" }
+                ]
+              }
+            },
+            {
+              "name": "modelCapacity",
+              "type": "Microsoft.Common.Slider",
+              "label": "Model capacity (thousands of tokens per minute)",
+              "min": 1,
+              "max": 200,
+              "defaultValue": 20,
+              "toolTip": "Requested capacity (thousands of tokens/min). Clamped to a safe per-model maximum, so a low value is fine for a first deploy."
+            },
+            {
+              "name": "promptInfo",
+              "type": "Microsoft.Common.InfoBox",
+              "visible": true,
+              "options": {
+                "icon": "Info",
+                "text": "The study's German v4_judge system prompt is the default. Leave the box empty to reproduce the paper, or paste an alternative such as the English translation in the README."
+              }
+            },
+            {
+              "name": "systemPrompt",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Custom system prompt (optional)",
+              "multiLine": true,
+              "defaultValue": "",
+              "toolTip": "Overrides the built-in German v4_judge prompt. Empty = paper default.",
+              "constraints": { "required": false }
+            }
+          ]
+        },
+        {
+          "name": "access",
+          "label": "Access",
+          "elements": [
+            {
+              "name": "authInfo",
+              "type": "Microsoft.Common.InfoBox",
+              "visible": true,
+              "options": {
+                "icon": "Info",
+                "text": "Microsoft Entra ID sign-in is the recommended default. 'No sign-in' leaves the app publicly reachable unless your IT team configures network access separately; this template does not add an inbound network restriction."
+              }
+            },
+            {
+              "name": "authMode",
+              "type": "Microsoft.Common.OptionsGroup",
+              "label": "User sign-in",
+              "defaultValue": "entra",
+              "toolTip": "Whether visitors must sign in with Microsoft Entra ID before using the app.",
+              "constraints": {
+                "required": true,
+                "allowedValues": [
+                  { "label": "Require Microsoft Entra ID sign-in (recommended)", "value": "entra" },
+                  { "label": "No sign-in (configure network access separately)", "value": "none" }
+                ]
+              }
+            },
+            {
+              "name": "entraClientId",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Application (client) ID",
+              "visible": "[equals(steps('access').authMode, 'entra')]",
+              "toolTip": "The app registration's Application (client) ID. An administrator creates it beforehand (see README).",
+              "constraints": {
+                "required": "[equals(steps('access').authMode, 'entra')]",
+                "regex": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+                "validationMessage": "Enter the Application (client) ID (a GUID)."
+              }
+            },
+            {
+              "name": "entraTenantId",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Directory (tenant) ID (optional)",
+              "visible": "[equals(steps('access').authMode, 'entra')]",
+              "defaultValue": "",
+              "toolTip": "Leave empty to use the tenant you are deploying into.",
+              "constraints": { "required": false }
+            }
+          ]
+        }
+      ],
+      "outputs": {
+        "kind": "Subscription",
+        "location": "[steps('basics').scope.location.name]",
+        "subscriptionId": "[steps('basics').scope.subscription.id]",
+        "parameters": {
+          "location": "[steps('basics').scope.location.name]",
+          "nameSuffix": "[steps('basics').nameSuffix]",
+          "institutionName": "[steps('basics').institutionName]",
+          "modelProfile": "[steps('model').modelProfile]",
+          "modelCapacity": "[steps('model').modelCapacity]",
+          "systemPrompt": "[steps('model').systemPrompt]",
+          "entraClientId": "[if(equals(steps('access').authMode, 'entra'), steps('access').entraClientId, '')]",
+          "entraTenantId": "[if(equals(steps('access').authMode, 'entra'), steps('access').entraTenantId, '')]"
+        }
+      }
+    }
+  }
+}

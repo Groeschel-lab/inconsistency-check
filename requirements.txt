@@ -1,0 +1,6 @@
+# Azure Functions (Python) app dependencies - vendored into the release zip.
+azure-functions>=1.21
+fastapi>=0.115
+requests>=2.32
+azure-identity>=1.17
+pydantic>=2.7

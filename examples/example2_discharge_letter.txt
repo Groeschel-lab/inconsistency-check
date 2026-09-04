@@ -1,0 +1,25 @@
+Kurzarztbrief
+
+Klinik für Innere Medizin, Musterklinikum Musterstadt
+Patientin: Frau Erika Musterfrau, geb. 12.05.1962
+Aufnahme: 02.06.2024     Entlassung: 07.06.2024
+
+Diagnosen:
+1. Unkomplizierter Harnwegsinfekt
+2. Diabetes mellitus Typ 2
+
+Verlauf:
+Aufnahme bei Dysurie und linksseitigem Flankenschmerz. In der Urinkultur Nachweis
+von E. coli. Bei bekannter Ciprofloxacin-Unverträglichkeit erfolgte die kalkulierte
+Therapie mit Ciprofloxacin 500 mg p.o. Die Patientin war während des gesamten
+stationären Aufenthalts fieberfrei; bei Aufnahme bestand Fieber bis 38,8 °C.
+Im Verlauf zeigte sich eine deutliche Beschwerdebesserung.
+
+Medikation bei Entlassung:
+- Metformin 1000 mg  1-0-1
+- Ciprofloxacin 500 mg  1-0-1  für 5 Tage
+
+Procedere:
+Kontrolle der Nieren- und Entzündungswerte beim Hausarzt in einer Woche.
+
+Mit freundlichen Grüßen

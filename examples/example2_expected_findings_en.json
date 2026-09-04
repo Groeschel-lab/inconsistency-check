@@ -1,0 +1,17 @@
+{
+  "_comment": "English convenience translation of the planted inconsistencies in example 2. It was not used in the study; wording, count, and severity can vary by model.",
+  "planted_inconsistencies": [
+    {
+      "description": "Medication prescribed despite a documented intolerance",
+      "category": "Content",
+      "severity": 7,
+      "note": "A ciprofloxacin intolerance is documented, but ciprofloxacin is prescribed."
+    },
+    {
+      "description": "Contradictory fever course",
+      "category": "Content",
+      "severity": 5,
+      "note": "The patient is described as afebrile throughout the stay, but fever is documented at admission."
+    }
+  ]
+}

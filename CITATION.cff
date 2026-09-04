@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite both the software and the accompanying paper."
+title: "Inconsistency Check"
+abstract: "A governed, keyless, one-click-deployable LLM logic check that flags internal inconsistencies in clinical documents."
+type: software
+repository-code: "https://github.com/groeschel-lab/inconsistency-check"
+license: MIT
+authors:
+  - family-names: Vogel
+    given-names: Markus
+  - family-names: Ruf
+    given-names: Sebastian
+  - family-names: Reuter
+    given-names: Nils
+  - family-names: Noori
+    given-names: Ayush
+  - family-names: Madrid
+    given-names: Julian Gabriel
+  - family-names: Witzenrath
+    given-names: Martin
+  - family-names: Sander
+    given-names: Leif Erik
+  - family-names: Gröschel
+    given-names: Matthias I.
+preferred-citation:
+  type: article
+  title: "Infrastructure as Code for deployment and governance of medical AI"
+  year: 2026
+  authors:
+    - family-names: Vogel
+      given-names: Markus
+    - family-names: Ruf
+      given-names: Sebastian
+    - family-names: Reuter
+      given-names: Nils
+    - family-names: Noori
+      given-names: Ayush
+    - family-names: Madrid
+      given-names: Julian Gabriel
+    - family-names: Witzenrath
+      given-names: Martin
+    - family-names: Sander
+      given-names: Leif Erik
+    - family-names: Gröschel
+      given-names: Matthias I.

@@ -1,0 +1,983 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.46.1.21595",
+      "templateHash": "13691342867385059593"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "swedencentral",
+      "allowedValues": [
+        "swedencentral",
+        "germanywestcentral",
+        "switzerlandnorth"
+      ],
+      "metadata": {
+        "description": "Azure region (EU). Claude Opus 4.7 (the paper reference model) is only in swedencentral."
+      }
+    },
+    "nameSuffix": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 8,
+      "metadata": {
+        "description": "Short unique suffix for resource names (3-8 lowercase letters/digits, e.g. logic1)."
+      }
+    },
+    "modelProfile": {
+      "type": "string",
+      "defaultValue": "claude-opus-4-7",
+      "allowedValues": [
+        "claude-opus-4-7",
+        "gpt-5.5",
+        "mistral-large-3",
+        "deepseek-v3.2",
+        "gpt-5.4-nano"
+      ],
+      "metadata": {
+        "description": "Which of the paper's five models to deploy. Claude Opus 4.7 is the validation reference."
+      }
+    },
+    "modelCapacity": {
+      "type": "int",
+      "defaultValue": 20,
+      "minValue": 1,
+      "maxValue": 500,
+      "metadata": {
+        "description": "Requested model capacity (thousands of tokens/min); clamped to a safe per-model maximum."
+      }
+    },
+    "organizationName": {
+      "type": "string",
+      "defaultValue": "Healthcare organization",
+      "metadata": {
+        "description": "Organization name for the model provider data."
+      }
+    },
+    "countryCode": {
+      "type": "string",
+      "defaultValue": "DE",
+      "metadata": {
+        "description": "ISO 3166 alpha-2 country code for the model provider data."
+      }
+    },
+    "industry": {
+      "type": "string",
+      "defaultValue": "Healthcare",
+      "metadata": {
+        "description": "Industry for the model provider data."
+      }
+    },
+    "institutionName": {
+      "type": "string",
+      "defaultValue": "",
+      "maxLength": 60,
+      "metadata": {
+        "description": "Optional institution name displayed in the frontend AI model access indicator."
+      }
+    },
+    "systemPrompt": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional. Override the built-in German v4_judge system prompt. Empty = paper default."
+      }
+    },
+    "entraClientId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional, recommended. Entra app registration (client) ID to require user sign-in. Empty = no user auth. Create the app registration yourself - see README."
+      }
+    },
+    "entraTenantId": {
+      "type": "string",
+      "defaultValue": "[tenant().tenantId]",
+      "metadata": {
+        "description": "Entra tenant ID for sign-in. Defaults to the deployment tenant."
+      }
+    },
+    "packageUri": {
+      "type": "string",
+      "defaultValue": "https://github.com/groeschel-lab/inconsistency-check/releases/latest/download/app.zip",
+      "metadata": {
+        "description": "Application package (zip). Defaults to the research GitHub release build."
+      }
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "defaultValue": "[format('rg-logiccheck-{0}', parameters('nameSuffix'))]",
+      "metadata": {
+        "description": "Resource group to create/use."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('resourceGroupName')]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "[format('core-{0}', parameters('nameSuffix'))]",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "nameSuffix": {
+            "value": "[parameters('nameSuffix')]"
+          },
+          "modelProfile": {
+            "value": "[parameters('modelProfile')]"
+          },
+          "modelCapacity": {
+            "value": "[parameters('modelCapacity')]"
+          },
+          "organizationName": {
+            "value": "[parameters('organizationName')]"
+          },
+          "countryCode": {
+            "value": "[parameters('countryCode')]"
+          },
+          "industry": {
+            "value": "[parameters('industry')]"
+          },
+          "institutionName": {
+            "value": "[parameters('institutionName')]"
+          },
+          "systemPrompt": {
+            "value": "[parameters('systemPrompt')]"
+          },
+          "packageUri": {
+            "value": "[parameters('packageUri')]"
+          },
+          "entraClientId": {
+            "value": "[parameters('entraClientId')]"
+          },
+          "entraTenantId": {
+            "value": "[parameters('entraTenantId')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "12452315787040575475"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region (EU). Claude Opus 4.7 (the paper reference model) is only in swedencentral."
+              }
+            },
+            "nameSuffix": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 8,
+              "metadata": {
+                "description": "Short unique suffix for resource names (3-8 lowercase letters/digits, e.g. logic1)."
+              }
+            },
+            "modelProfile": {
+              "type": "string",
+              "allowedValues": [
+                "claude-opus-4-7",
+                "gpt-5.5",
+                "mistral-large-3",
+                "deepseek-v3.2",
+                "gpt-5.4-nano"
+              ],
+              "metadata": {
+                "description": "Which of the paper's five models to deploy. Claude Opus 4.7 is the validation reference."
+              }
+            },
+            "modelCapacity": {
+              "type": "int",
+              "defaultValue": 20,
+              "minValue": 1,
+              "metadata": {
+                "description": "Requested model capacity (thousands of tokens/min); clamped to a safe per-model maximum."
+              }
+            },
+            "organizationName": {
+              "type": "string",
+              "defaultValue": "Healthcare organization",
+              "metadata": {
+                "description": "Organization name for the model provider data."
+              }
+            },
+            "countryCode": {
+              "type": "string",
+              "defaultValue": "DE",
+              "metadata": {
+                "description": "ISO 3166 alpha-2 country code for the model provider data."
+              }
+            },
+            "industry": {
+              "type": "string",
+              "defaultValue": "Healthcare",
+              "metadata": {
+                "description": "Industry for the model provider data."
+              }
+            },
+            "institutionName": {
+              "type": "string",
+              "defaultValue": "",
+              "maxLength": 60,
+              "metadata": {
+                "description": "Optional institution name displayed in the frontend AI model access indicator."
+              }
+            },
+            "systemPrompt": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional. Override the built-in German v4_judge system prompt. Empty = paper default."
+              }
+            },
+            "packageUri": {
+              "type": "string",
+              "metadata": {
+                "description": "Application package (zip). Defaults to the research GitHub release build."
+              }
+            },
+            "entraClientId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional, recommended. Entra app registration (client) ID to require user sign-in. Empty = no user auth. Create the app registration yourself - see README."
+              }
+            },
+            "entraTenantId": {
+              "type": "string",
+              "defaultValue": "[tenant().tenantId]",
+              "metadata": {
+                "description": "Entra tenant ID for sign-in. Defaults to the deployment tenant."
+              }
+            }
+          },
+          "variables": {
+            "storageBlobDataOwnerRole": "b7e6dc6d-f1e8-4753-8033-0f276bb0955b",
+            "storageQueueDataContributorRole": "974c5e8b-45b9-4653-ba55-5f855dd0fb88",
+            "storageTableDataContributorRole": "0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3",
+            "cognitiveServicesOpenAIUserRole": "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd",
+            "cognitiveServicesUserRole": "a97b65f3-24c7-4388-baec-2e87135dc908",
+            "storageSubResources": [
+              "blob",
+              "queue",
+              "table",
+              "file"
+            ],
+            "foundryPrivateDnsZones": [
+              "privatelink.cognitiveservices.azure.com",
+              "privatelink.openai.azure.com",
+              "privatelink.services.ai.azure.com"
+            ],
+            "promptSetting": "[if(empty(parameters('systemPrompt')), createArray(), createArray(createObject('name', 'SYSTEM_PROMPT', 'value', parameters('systemPrompt'))))]",
+            "institutionSetting": "[if(empty(parameters('institutionName')), createArray(), createArray(createObject('name', 'INSTITUTION_NAME', 'value', parameters('institutionName'))))]",
+            "functionAppName": "[format('func-lc-{0}', parameters('nameSuffix'))]",
+            "authEnabled": "[not(empty(parameters('entraClientId')))]",
+            "effectiveTenantId": "[if(empty(parameters('entraTenantId')), tenant().tenantId, parameters('entraTenantId'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[format('stlc{0}', parameters('nameSuffix'))]",
+              "location": "[parameters('location')]",
+              "kind": "StorageV2",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "properties": {
+                "supportsHttpsTrafficOnly": true,
+                "minimumTlsVersion": "TLS1_2",
+                "allowSharedKeyAccess": false,
+                "allowBlobPublicAccess": false,
+                "networkAcls": {
+                  "defaultAction": "Deny",
+                  "bypass": "AzureServices"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2024-01-01",
+              "name": "[format('vnet-lc-{0}', parameters('nameSuffix'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "10.40.0.0/16"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks/subnets",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', format('vnet-lc-{0}', parameters('nameSuffix')), 'snet-app')]",
+              "properties": {
+                "addressPrefix": "10.40.1.0/24",
+                "delegations": [
+                  {
+                    "name": "delegation-app",
+                    "properties": {
+                      "serviceName": "Microsoft.Web/serverFarms"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-lc-{0}', parameters('nameSuffix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks/subnets",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', format('vnet-lc-{0}', parameters('nameSuffix')), 'snet-pe')]",
+              "properties": {
+                "addressPrefix": "10.40.2.0/24",
+                "privateEndpointNetworkPolicies": "Disabled"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', format('vnet-lc-{0}', parameters('nameSuffix')), 'snet-app')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-lc-{0}', parameters('nameSuffix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2023-12-01",
+              "name": "[format('plan-lc-{0}', parameters('nameSuffix'))]",
+              "location": "[parameters('location')]",
+              "kind": "elastic",
+              "sku": {
+                "name": "EP1",
+                "tier": "ElasticPremium"
+              },
+              "properties": {
+                "reserved": true
+              }
+            },
+            {
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2020-02-02",
+              "name": "[format('appi-lc-{0}', parameters('nameSuffix'))]",
+              "location": "[parameters('location')]",
+              "kind": "web",
+              "properties": {
+                "Application_Type": "web",
+                "Request_Source": "rest"
+              }
+            },
+            {
+              "copy": {
+                "name": "storageDnsZones",
+                "count": "[length(variables('storageSubResources'))]"
+              },
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "[format('privatelink.{0}.{1}', variables('storageSubResources')[copyIndex()], environment().suffixes.storage)]",
+              "location": "global"
+            },
+            {
+              "copy": {
+                "name": "storageDnsZoneLinks",
+                "count": "[length(variables('storageSubResources'))]"
+              },
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', format('privatelink.{0}.{1}', variables('storageSubResources')[copyIndex()], environment().suffixes.storage), format('link-{0}', variables('storageSubResources')[copyIndex()]))]",
+              "location": "global",
+              "properties": {
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-lc-{0}', parameters('nameSuffix')))]"
+                },
+                "registrationEnabled": false
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.{0}.{1}', variables('storageSubResources')[copyIndex()], environment().suffixes.storage))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-lc-{0}', parameters('nameSuffix')))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "storagePe",
+                "count": "[length(variables('storageSubResources'))]"
+              },
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[format('pe-{0}-lc-{1}', variables('storageSubResources')[copyIndex()], parameters('nameSuffix'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', format('vnet-lc-{0}', parameters('nameSuffix')), 'snet-pe')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[variables('storageSubResources')[copyIndex()]]",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]",
+                      "groupIds": [
+                        "[variables('storageSubResources')[copyIndex()]]"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', format('vnet-lc-{0}', parameters('nameSuffix')), 'snet-pe')]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "storagePeDnsGroups",
+                "count": "[length(variables('storageSubResources'))]"
+              },
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', format('pe-{0}-lc-{1}', variables('storageSubResources')[copyIndex()], parameters('nameSuffix')), 'default')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "[variables('storageSubResources')[copyIndex()]]",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.{0}.{1}', variables('storageSubResources')[copyIndex()], environment().suffixes.storage))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', format('privatelink.{0}.{1}', variables('storageSubResources')[copyIndex()], environment().suffixes.storage))]",
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-{0}-lc-{1}', variables('storageSubResources')[copyIndex()], parameters('nameSuffix')))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "foundryDnsZonesRes",
+                "count": "[length(variables('foundryPrivateDnsZones'))]"
+              },
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "[variables('foundryPrivateDnsZones')[copyIndex()]]",
+              "location": "global"
+            },
+            {
+              "copy": {
+                "name": "foundryDnsLinks",
+                "count": "[length(variables('foundryPrivateDnsZones'))]"
+              },
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', variables('foundryPrivateDnsZones')[copyIndex()], 'link-aif')]",
+              "location": "global",
+              "properties": {
+                "virtualNetwork": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-lc-{0}', parameters('nameSuffix')))]"
+                },
+                "registrationEnabled": false
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('foundryPrivateDnsZones')[copyIndex()])]",
+                "[resourceId('Microsoft.Network/virtualNetworks', format('vnet-lc-{0}', parameters('nameSuffix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2024-01-01",
+              "name": "[format('pe-aif-lc-{0}', parameters('nameSuffix'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', format('vnet-lc-{0}', parameters('nameSuffix')), 'snet-pe')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "aif",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.CognitiveServices/accounts', format('aif-{0}', parameters('nameSuffix')))]",
+                      "groupIds": [
+                        "account"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix')))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', format('vnet-lc-{0}', parameters('nameSuffix')), 'snet-pe')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', format('pe-aif-lc-{0}', parameters('nameSuffix')), 'default')]",
+              "properties": {
+                "copy": [
+                  {
+                    "name": "privateDnsZoneConfigs",
+                    "count": "[length(variables('foundryPrivateDnsZones'))]",
+                    "input": {
+                      "name": "[format('zone-{0}', copyIndex('privateDnsZoneConfigs'))]",
+                      "properties": {
+                        "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('foundryPrivateDnsZones')[copyIndex('privateDnsZoneConfigs')])]"
+                      }
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "foundryDnsZonesRes",
+                "[resourceId('Microsoft.Network/privateEndpoints', format('pe-aif-lc-{0}', parameters('nameSuffix')))]"
+              ]
+            },
+            {
+              "condition": "[variables('authEnabled')]",
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[format('id-auth-{0}', parameters('nameSuffix'))]",
+              "location": "[parameters('location')]"
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2023-12-01",
+              "name": "[variables('functionAppName')]",
+              "location": "[parameters('location')]",
+              "kind": "functionapp,linux",
+              "identity": "[if(variables('authEnabled'), createObject('type', 'SystemAssigned, UserAssigned', 'userAssignedIdentities', createObject(format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-auth-{0}', parameters('nameSuffix')))), createObject())), createObject('type', 'SystemAssigned'))]",
+              "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', format('plan-lc-{0}', parameters('nameSuffix')))]",
+                "virtualNetworkSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', format('vnet-lc-{0}', parameters('nameSuffix')), 'snet-app')]",
+                "httpsOnly": true,
+                "siteConfig": {
+                  "linuxFxVersion": "Python|3.11",
+                  "ftpsState": "Disabled",
+                  "minTlsVersion": "1.2",
+                  "cors": {
+                    "allowedOrigins": [
+                      "[format('https://{0}.azurewebsites.net', variables('functionAppName'))]"
+                    ],
+                    "supportCredentials": false
+                  },
+                  "appSettings": "[union(createArray(createObject('name', 'FUNCTIONS_EXTENSION_VERSION', 'value', '~4'), createObject('name', 'FUNCTIONS_WORKER_RUNTIME', 'value', 'python'), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Insights/components', format('appi-lc-{0}', parameters('nameSuffix'))), '2020-02-02').ConnectionString), createObject('name', 'AzureWebJobsStorage__accountName', 'value', format('stlc{0}', parameters('nameSuffix'))), createObject('name', 'AzureWebJobsStorage__credential', 'value', 'managedidentity'), createObject('name', 'WEBSITE_RUN_FROM_PACKAGE', 'value', parameters('packageUri')), createObject('name', 'WEBSITE_VNET_ROUTE_ALL', 'value', '0'), createObject('name', 'SCM_DO_BUILD_DURING_DEPLOYMENT', 'value', 'false'), createObject('name', 'WEBSITE_USE_PLACEHOLDER', 'value', '0'), createObject('name', 'AZURE_AI_ENDPOINT', 'value', reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.endpoint.value), createObject('name', 'AZURE_AI_DEPLOYMENT', 'value', reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.deploymentName.value), createObject('name', 'MODEL_FORMAT', 'value', reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.modelFormat.value)), variables('promptSetting'), variables('institutionSetting'), if(variables('authEnabled'), createArray(createObject('name', 'OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID', 'value', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-auth-{0}', parameters('nameSuffix'))), '2023-01-31').clientId)), createArray()))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/components', format('appi-lc-{0}', parameters('nameSuffix')))]",
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-auth-{0}', parameters('nameSuffix')))]",
+                "[resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix')))]",
+                "[resourceId('Microsoft.Web/serverfarms', format('plan-lc-{0}', parameters('nameSuffix')))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]",
+                "storagePeDnsGroups",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', format('vnet-lc-{0}', parameters('nameSuffix')), 'snet-app')]"
+              ]
+            },
+            {
+              "condition": "[variables('authEnabled')]",
+              "type": "Microsoft.Web/sites/config",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}/{1}', variables('functionAppName'), 'authsettingsV2')]",
+              "properties": {
+                "platform": {
+                  "enabled": true
+                },
+                "globalValidation": {
+                  "requireAuthentication": true,
+                  "unauthenticatedClientAction": "RedirectToLoginPage",
+                  "redirectToProvider": "azureactivedirectory"
+                },
+                "identityProviders": {
+                  "azureActiveDirectory": {
+                    "enabled": true,
+                    "registration": {
+                      "openIdIssuer": "[format('{0}{1}/v2.0', environment().authentication.loginEndpoint, variables('effectiveTenantId'))]",
+                      "clientId": "[parameters('entraClientId')]",
+                      "clientSecretSettingName": "OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID"
+                    },
+                    "validation": {
+                      "allowedAudiences": [
+                        "[format('api://{0}', parameters('entraClientId'))]",
+                        "[parameters('entraClientId')]"
+                      ]
+                    }
+                  }
+                },
+                "login": {
+                  "tokenStore": {
+                    "enabled": false
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix'))), resourceId('Microsoft.Web/sites', variables('functionAppName')), variables('storageBlobDataOwnerRole'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDataOwnerRole'))]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix'))), resourceId('Microsoft.Web/sites', variables('functionAppName')), variables('storageQueueDataContributorRole'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageQueueDataContributorRole'))]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix'))), resourceId('Microsoft.Web/sites', variables('functionAppName')), variables('storageTableDataContributorRole'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageTableDataContributorRole'))]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', format('aif-{0}', parameters('nameSuffix')))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', format('aif-{0}', parameters('nameSuffix'))), resourceId('Microsoft.Web/sites', variables('functionAppName')), variables('cognitiveServicesOpenAIUserRole'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesOpenAIUserRole'))]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', format('aif-{0}', parameters('nameSuffix')))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', format('aif-{0}', parameters('nameSuffix'))), resourceId('Microsoft.Web/sites', variables('functionAppName')), variables('cognitiveServicesUserRole'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesUserRole'))]",
+                "principalId": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2025-04-01",
+              "name": "[format('llm-{0}', parameters('nameSuffix'))]",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "location": {
+                    "value": "[parameters('location')]"
+                  },
+                  "nameSuffix": {
+                    "value": "[parameters('nameSuffix')]"
+                  },
+                  "modelProfile": {
+                    "value": "[parameters('modelProfile')]"
+                  },
+                  "modelCapacity": {
+                    "value": "[parameters('modelCapacity')]"
+                  },
+                  "organizationName": {
+                    "value": "[parameters('organizationName')]"
+                  },
+                  "countryCode": {
+                    "value": "[parameters('countryCode')]"
+                  },
+                  "industry": {
+                    "value": "[parameters('industry')]"
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.46.1.21595",
+                      "templateHash": "12969234543637383992"
+                    }
+                  },
+                  "parameters": {
+                    "location": {
+                      "type": "string",
+                      "metadata": {
+                        "description": "Azure region (EU). Claude Opus 4.7 (the paper reference model) is only in swedencentral."
+                      }
+                    },
+                    "nameSuffix": {
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 8,
+                      "metadata": {
+                        "description": "Short unique suffix for resource names (3-8 lowercase letters/digits, e.g. logic1)."
+                      }
+                    },
+                    "modelProfile": {
+                      "type": "string",
+                      "allowedValues": [
+                        "claude-opus-4-7",
+                        "gpt-5.5",
+                        "mistral-large-3",
+                        "deepseek-v3.2",
+                        "gpt-5.4-nano"
+                      ],
+                      "metadata": {
+                        "description": "Which of the paper's five models to deploy. Claude Opus 4.7 is the validation reference."
+                      }
+                    },
+                    "modelCapacity": {
+                      "type": "int",
+                      "defaultValue": 20,
+                      "minValue": 1,
+                      "metadata": {
+                        "description": "Requested model capacity (thousands of tokens/min); clamped to a safe per-model maximum."
+                      }
+                    },
+                    "organizationName": {
+                      "type": "string",
+                      "defaultValue": "Healthcare organization",
+                      "metadata": {
+                        "description": "Organization name for the model provider data."
+                      }
+                    },
+                    "countryCode": {
+                      "type": "string",
+                      "defaultValue": "DE",
+                      "metadata": {
+                        "description": "ISO 3166 alpha-2 country code for the model provider data."
+                      }
+                    },
+                    "industry": {
+                      "type": "string",
+                      "defaultValue": "Healthcare",
+                      "metadata": {
+                        "description": "Industry for the model provider data."
+                      }
+                    }
+                  },
+                  "variables": {
+                    "profiles": {
+                      "claude-opus-4-7": {
+                        "format": "Anthropic",
+                        "name": "claude-opus-4-7",
+                        "version": "1",
+                        "sku": "GlobalStandard",
+                        "maxCapacity": 40
+                      },
+                      "gpt-5.5": {
+                        "format": "OpenAI",
+                        "name": "gpt-5.5",
+                        "version": "2026-04-24",
+                        "sku": "GlobalStandard",
+                        "maxCapacity": 1000
+                      },
+                      "mistral-large-3": {
+                        "format": "Mistral AI",
+                        "name": "Mistral-Large-3",
+                        "version": "1",
+                        "sku": "GlobalStandard",
+                        "maxCapacity": 20
+                      },
+                      "deepseek-v3.2": {
+                        "format": "DeepSeek",
+                        "name": "DeepSeek-V3.2",
+                        "version": "1",
+                        "sku": "GlobalStandard",
+                        "maxCapacity": 20
+                      },
+                      "gpt-5.4-nano": {
+                        "format": "OpenAI",
+                        "name": "gpt-5.4-nano",
+                        "version": "2026-03-17",
+                        "sku": "GlobalStandard",
+                        "maxCapacity": 5000
+                      }
+                    },
+                    "p": "[variables('profiles')[parameters('modelProfile')]]",
+                    "effectiveCapacity": "[min(parameters('modelCapacity'), variables('p').maxCapacity)]"
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.CognitiveServices/accounts",
+                      "apiVersion": "2024-10-01",
+                      "name": "[format('aif-{0}', parameters('nameSuffix'))]",
+                      "location": "[parameters('location')]",
+                      "kind": "AIServices",
+                      "sku": {
+                        "name": "S0"
+                      },
+                      "identity": {
+                        "type": "SystemAssigned"
+                      },
+                      "properties": {
+                        "customSubDomainName": "[format('aif-{0}', parameters('nameSuffix'))]",
+                        "disableLocalAuth": true,
+                        "publicNetworkAccess": "Disabled"
+                      }
+                    },
+                    {
+                      "type": "Microsoft.CognitiveServices/accounts/deployments",
+                      "apiVersion": "2026-05-15-preview",
+                      "name": "[format('{0}/{1}', format('aif-{0}', parameters('nameSuffix')), variables('p').name)]",
+                      "sku": {
+                        "name": "[variables('p').sku]",
+                        "capacity": "[variables('effectiveCapacity')]"
+                      },
+                      "properties": "[if(equals(variables('p').format, 'Anthropic'), createObject('model', createObject('format', variables('p').format, 'name', variables('p').name, 'version', variables('p').version), 'modelProviderData', createObject('industry', parameters('industry'), 'organizationName', parameters('organizationName'), 'countryCode', parameters('countryCode'))), createObject('model', createObject('format', variables('p').format, 'name', variables('p').name, 'version', variables('p').version)))]",
+                      "dependsOn": [
+                        "[resourceId('Microsoft.CognitiveServices/accounts', format('aif-{0}', parameters('nameSuffix')))]"
+                      ]
+                    }
+                  ],
+                  "outputs": {
+                    "accountId": {
+                      "type": "string",
+                      "value": "[resourceId('Microsoft.CognitiveServices/accounts', format('aif-{0}', parameters('nameSuffix')))]"
+                    },
+                    "accountName": {
+                      "type": "string",
+                      "value": "[format('aif-{0}', parameters('nameSuffix'))]"
+                    },
+                    "endpoint": {
+                      "type": "string",
+                      "value": "[format('https://aif-{0}.services.ai.azure.com', parameters('nameSuffix'))]"
+                    },
+                    "deploymentName": {
+                      "type": "string",
+                      "value": "[variables('p').name]"
+                    },
+                    "modelFormat": {
+                      "type": "string",
+                      "value": "[variables('p').format]"
+                    },
+                    "modelLabel": {
+                      "type": "string",
+                      "value": "[format('{0} {1}@{2} ({3})', variables('p').format, variables('p').name, variables('p').version, variables('p').sku)]"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "functionAppName": {
+              "type": "string",
+              "value": "[variables('functionAppName')]"
+            },
+            "functionAppUrl": {
+              "type": "string",
+              "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2023-12-01').defaultHostName)]"
+            },
+            "foundryEndpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.endpoint.value]"
+            },
+            "modelDeployment": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.deploymentName.value]"
+            },
+            "modelLabel": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.modelLabel.value]"
+            },
+            "authIdentityClientId": {
+              "type": "string",
+              "value": "[if(variables('authEnabled'), reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-auth-{0}', parameters('nameSuffix'))), '2023-01-31').clientId, '')]"
+            },
+            "authIdentityPrincipalId": {
+              "type": "string",
+              "value": "[if(variables('authEnabled'), reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-auth-{0}', parameters('nameSuffix'))), '2023-01-31').principalId, '')]"
+            },
+            "authFederationIssuer": {
+              "type": "string",
+              "value": "[if(variables('authEnabled'), format('{0}{1}/v2.0', environment().authentication.loginEndpoint, tenant().tenantId), '')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "functionAppUrl": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', format('core-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.functionAppUrl.value]"
+    },
+    "foundryEndpoint": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', format('core-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.foundryEndpoint.value]"
+    },
+    "modelDeployment": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', format('core-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.modelDeployment.value]"
+    },
+    "modelLabel": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', format('core-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.modelLabel.value]"
+    },
+    "authIdentityClientId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', format('core-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.authIdentityClientId.value]"
+    },
+    "authIdentityPrincipalId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', format('core-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.authIdentityPrincipalId.value]"
+    },
+    "authFederationIssuer": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', format('core-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.authFederationIssuer.value]"
+    }
+  }
+}

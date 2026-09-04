@@ -1,0 +1,39 @@
+Discharge summary
+
+Department of Pulmonology, Sample Hospital, Sampletown
+Patient: Mr Max Mustermann, born 01 January 1950
+Admission: 15 March 2024     Discharge: 10 March 2024
+
+Dear colleague,
+
+We report on the above patient, who received inpatient treatment from
+15 March 2024 to 10 March 2024.
+
+Diagnoses:
+1. Community-acquired pneumonia of the right lower lobe
+2. Arterial hypertension
+3. Hypothyroidism
+
+History:
+The patient was admitted with a four-day history of productive cough, fever up
+to 39.2 degrees C, and exertional dyspnea. Known penicillin allergy.
+
+Findings:
+At admission, CRP was 180 mg/L and leukocytes were 14.2/nL. Chest radiography
+showed an infiltrate in the right lower lobe. During treatment, CRP decreased to
+210 mg/L.
+
+Treatment and course:
+Empirical antibiotic treatment with intravenous amoxicillin/clavulanic acid was
+started. Her clinical condition improved rapidly. She was discharged home in
+good general condition.
+
+Medication at discharge:
+- Amoxicillin/clavulanic acid 875/125 mg  1-0-1  for another 5 days
+- Ramipril 5 mg  1-0-0
+- Levothyroxine 50 mg  1-0-0
+
+Follow-up:
+Please return to our pulmonology outpatient clinic on 05 March 2024.
+
+Kind regards

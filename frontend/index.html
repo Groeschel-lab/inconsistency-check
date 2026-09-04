@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Inconsistency Check</title>
+<style>
+  :root {
+    --bg: #f4f6f6;
+    --surface: #ffffff;
+    --ink: #172326;
+    --muted: #687578;
+    --line: #dfe5e5;
+    --line-strong: #ccd5d6;
+    --brand: #124f59;
+    --brand-dark: #0d4149;
+    --brand-ink: #ffffff;
+    --focus: #247886;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; color: var(--ink);
+    background: linear-gradient(180deg, #f1f4f4 0, var(--bg) 280px, #f8f9f9 100%);
+    font: 14px/1.5 "Segoe UI", Inter, system-ui, -apple-system, sans-serif;
+  }
+  header {
+    color: var(--brand-ink); background: var(--brand);
+    border-bottom: 1px solid var(--brand-dark);
+  }
+  .header-inner {
+    max-width: 1120px; min-height: 54px; margin: 0 auto; padding: 9px 24px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  header .title { display: flex; flex-direction: column; }
+  header h1 { margin: 0; font-size: 17px; line-height: 1.2; font-weight: 600; letter-spacing: 0; }
+  header .title p { margin: 2px 0 0; font-size: 11.5px; line-height: 1.3; opacity: .78; }
+  .ai-disclosure { position: relative; margin-left: auto; }
+  .ai-disclosure summary { list-style: none; cursor: pointer; }
+  .ai-disclosure summary::-webkit-details-marker { display: none; }
+  .pill {
+    margin-left: 0; font-size: 11px; background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16); border-radius: 999px; padding: 3px 8px;
+    display: inline-flex; align-items: center; gap: 7px; max-width: calc(100vw - 28px); white-space: nowrap;
+  }
+  #health-text { display: block; max-width: min(320px, 46vw); overflow: hidden; text-overflow: ellipsis; }
+  .ai-disclosure[open] .pill { background: rgba(255,255,255,.14); }
+  .ai-details {
+    position: absolute; z-index: 10; top: calc(100% + 8px); right: 0;
+    width: min(360px, calc(100vw - 28px)); padding: 13px 14px;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--line-strong);
+    border-radius: 6px; box-shadow: 0 6px 18px rgba(23,35,38,.14);
+  }
+  .ai-details h2 { margin: 0 0 7px; font-size: 13px; line-height: 1.3; font-weight: 650; }
+  .ai-details dl {
+    display: grid; grid-template-columns: max-content 1fr; gap: 2px 9px;
+    margin: 0; padding: 7px 0 0; border-top: 1px solid var(--line);
+  }
+  .ai-details dt { color: var(--muted); font-size: 11px; font-weight: 600; }
+  .ai-details dd { margin: 0 0 4px; color: var(--ink); font-size: 11px; overflow-wrap: anywhere; }
+  .window-action {
+    width: 28px; min-height: 26px; padding: 0; color: var(--brand-ink);
+    background: transparent; border-color: rgba(255,255,255,.2); border-radius: 4px;
+    font-size: 15px; line-height: 1;
+  }
+  .window-action:hover { background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.32); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: #a8b5b7; }
+  .dot.ok { background: #8ac99b; } .dot.bad { background: #dca1a1; }
+  main { max-width: 1120px; margin: 20px auto; padding: 0 24px; }
+  .document-panel {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: 0 1px 2px rgba(23,35,38,.025);
+    padding: 17px 20px 14px;
+  }
+  label.field-label { display: block; font-weight: 600; font-size: 12.5px; margin: 0 0 7px; }
+  textarea {
+    width: 100%; min-height: 164px; padding: 11px 12px; color: var(--ink);
+    border: 1px solid var(--line-strong); border-radius: 6px; background: #fcfdfd;
+    font: 13.5px/1.55 "Segoe UI", Inter, system-ui, -apple-system, sans-serif; resize: vertical;
+  }
+  textarea:focus { outline: 2px solid var(--focus); outline-offset: 1px; border-color: var(--focus); }
+  .toolbar { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  button {
+    min-height: 32px; font: inherit; font-size: 12.5px; font-weight: 600;
+    border: 1px solid transparent; padding: 6px 12px; border-radius: 6px;
+    cursor: pointer; transition: filter .12s, background .12s, border-color .12s;
+  }
+  button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .btn-primary { background: var(--brand); color: var(--brand-ink); }
+  .btn-primary:hover { filter: brightness(1.07); }
+  .btn-ghost { background: var(--surface); color: var(--ink); border-color: var(--line-strong); }
+  .btn-ghost:hover { background: #f3f6f6; border-color: #b9c5c6; }
+  button:disabled { opacity: .5; cursor: default; filter: none; }
+  .meta { margin-left: auto; font-size: 11.5px; color: var(--muted); }
+  .hint { font-size: 11.25px; line-height: 1.4; color: var(--muted); margin: 7px 0 0; }
+  kbd {
+    font: inherit; font-size: 10.5px; background: #f0f3f3; border: 1px solid var(--line);
+    border-bottom-width: 2px; border-radius: 4px; padding: 1px 5px;
+  }
+  #summary {
+    display: flex; align-items: baseline; flex-wrap: wrap; margin: 20px 2px 0;
+    padding: 0 0 9px; border-bottom: 1px solid var(--line-strong);
+  }
+  .chip {
+    font-size: 11.5px; font-weight: 500; color: var(--muted);
+  }
+  .chip:first-child { color: var(--ink); font-weight: 600; }
+  .chip + .chip::before { content: "\00b7"; margin: 0 8px; color: #9aa6a8; }
+  .issue {
+    background: transparent; border: 0; border-bottom: 1px solid var(--line);
+    border-radius: 0; box-shadow: none; padding: 15px 2px 16px; margin: 0;
+  }
+  .issue-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin-bottom: 8px; }
+  .issue h3 { margin: 0; font-size: 14.5px; line-height: 1.35; font-weight: 600; flex: 1 1 auto; }
+  .category { font-size: 11px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+  .severity {
+    font-size: 10.5px; font-weight: 600; color: #526064; background: #f0f3f3;
+    border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; white-space: nowrap;
+  }
+  .issue dl { display: grid; grid-template-columns: 132px 1fr; gap: 4px 14px; margin: 0; }
+  .issue dt { color: var(--muted); font-size: 11.5px; font-weight: 600; }
+  .issue dd { margin: 0; font-size: 13px; }
+  .state {
+    text-align: center; color: var(--muted); border-bottom: 1px solid var(--line);
+    padding: 26px 10px; font-size: 13px;
+  }
+  .spinner {
+    width: 15px; height: 15px; border: 2px solid #d4dddd; border-top-color: var(--brand);
+    border-radius: 50%; display: inline-block; vertical-align: -3px; margin-right: 7px;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  footer { max-width: 1120px; margin: 10px auto 28px; padding: 0 24px; }
+  .footer-meta {
+    display: flex; align-items: flex-start; gap: 24px; border-top: 1px solid var(--line);
+    padding-top: 10px;
+  }
+  .disclaimer {
+    max-width: 790px; margin: 0; font-size: 11.25px; line-height: 1.45; color: var(--muted);
+  }
+  .disclaimer strong { color: #455256; font-weight: 600; }
+  .source { margin: 0 0 0 auto; font-size: 11.25px; line-height: 1.45; color: var(--muted); white-space: nowrap; }
+  .source a { color: var(--brand); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  .source a:hover { color: var(--brand-dark); }
+
+  body.compact .header-inner,
+  body.compact main,
+  body.compact footer { max-width: 620px; }
+  body.compact .header-inner { min-height: 50px; padding: 8px 14px; gap: 10px; }
+  body.compact #health-text { max-width: 260px; }
+  body.compact header .title p, body.compact .window-action { display: none; }
+  body.compact main { margin: 12px auto; padding: 0 10px; }
+  body.compact .document-panel { padding: 13px 12px 11px; }
+  body.compact textarea { min-height: 140px; }
+  body.compact .meta { width: 100%; margin-left: 0; }
+  body.compact .issue h3 { flex-basis: 100%; }
+  body.compact .issue dl { grid-template-columns: 1fr; gap: 2px; }
+  body.compact .issue dd { margin-bottom: 6px; }
+  body.compact footer { margin-bottom: 18px; padding: 0 12px; }
+  body.compact .footer-meta { display: block; }
+  body.compact .source { margin-top: 7px; white-space: normal; overflow-wrap: anywhere; }
+
+  @media (max-width: 680px) {
+    .header-inner { min-height: 50px; padding: 8px 14px; gap: 10px; }
+    header .title p { display: none; }
+    main { margin: 14px auto; padding: 0 12px; }
+    .document-panel { padding: 14px 13px 12px; }
+    textarea { min-height: 150px; }
+    .meta { width: 100%; margin-left: 0; }
+    .issue h3 { flex-basis: 100%; }
+    .issue dl { grid-template-columns: 1fr; gap: 2px; }
+    .issue dd { margin-bottom: 6px; }
+    footer { margin-bottom: 20px; padding: 0 14px; }
+    .footer-meta { display: block; }
+    .source { margin-top: 7px; white-space: normal; overflow-wrap: anywhere; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="title">
+      <h1>Inconsistency Check</h1>
+      <p>Clinical document consistency review</p>
+    </div>
+    <details class="ai-disclosure">
+      <summary class="pill" id="health" title="About this AI connection" aria-label="AI connection information">
+        <span class="dot" id="health-dot"></span><span id="health-text">checking AI&hellip;</span>
+      </summary>
+      <div class="ai-details" role="note">
+        <h2 id="ai-details-title">Institution-controlled AI model access</h2>
+        <dl>
+          <dt>Institution</dt><dd id="health-institution">Checking&hellip;</dd>
+          <dt>AI model</dt><dd id="health-model">Checking&hellip;</dd>
+          <dt>Model training</dt><dd>Use of this tool does not train the model</dd>
+          <dt>Submitted text</dt><dd>Processed in memory; not persisted by this application</dd>
+        </dl>
+      </div>
+    </details>
+    <button id="open-compact" class="window-action" type="button" title="Open compact window" aria-label="Open compact window">&#9635;</button>
+  </div>
+</header>
+
+<main>
+  <section class="document-panel">
+    <label class="field-label" for="text">Clinical text</label>
+    <textarea id="text" placeholder="Paste clinical text (e.g. a discharge summary) here&hellip;" aria-describedby="hint"></textarea>
+    <div class="toolbar">
+      <button id="analyze" class="btn-primary">Analyze</button>
+      <button id="paste" class="btn-ghost" type="button">Paste from clipboard</button>
+      <button id="clear" class="btn-ghost" type="button">Clear</button>
+      <span class="meta" id="charcount">0 characters</span>
+    </div>
+    <p class="hint" id="hint">Tip: paste with <kbd>Ctrl</kbd> + <kbd>V</kbd> to analyze automatically, or press <kbd>Ctrl</kbd> + <kbd>Enter</kbd>. Text is processed in memory and never stored.</p>
+  </section>
+
+  <div id="summary" hidden></div>
+  <div id="results" aria-live="polite"></div>
+</main>
+
+<footer>
+  <div class="footer-meta">
+    <p class="disclaimer"><strong>Research prototype.</strong> Use only within an organizationally approved setting; qualified clinicians must review every finding.</p>
+    <p class="source">Reference: <a href="https://github.com/groeschel-lab/inconsistency-check" target="_blank" rel="noopener noreferrer" title="Source code repository; publication link pending">Vogel et al. (2026), submitted</a></p>
+  </div>
+</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const SEV = (s) => (s >= 7 ? "high" : s >= 4 ? "med" : "low");
+const esc = (s) => { const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; };
+
+function setStatus(html, tone) {
+  $("results").innerHTML = html ? `<div class="state">${html}</div>` : "";
+}
+
+function analyzeFailureMessage(status) {
+  if (status === 401) return "Your session has expired. Reload the page and sign in again.";
+  if (status === 403) return "You do not have access to this tool. Please contact your local support team.";
+  if (status === 413) return "The text is too long to analyze at once. Try a shorter section.";
+  if (status === 408 || status === 504) return "The check took too long. Please try again.";
+  if (status === 429) return "The service is busy. Wait a moment and try again.";
+  if (status === 400 || status === 422) return "The text could not be submitted. Check it and try again.";
+  if (status >= 500) return "The check is temporarily unavailable. Please try again in a moment. If the problem continues, contact your local support team.";
+  return "The check could not be completed. Please try again.";
+}
+
+// Check backend connectivity.
+(async () => {
+  try {
+    const r = await fetch("/api/health");
+    const h = await r.json();
+    const ok = r.ok && h.endpoint_configured;
+    const institution = (h.institution || "").trim();
+    const accessLabel = institution ? "AI model access controlled by " + institution : "Institution-controlled AI model access";
+    $("health-dot").className = "dot " + (ok ? "ok" : "bad");
+    $("health-text").textContent = ok ? accessLabel : "AI not configured";
+    $("ai-details-title").textContent = accessLabel;
+    $("health-institution").textContent = institution || "Deploying institution";
+    $("health-model").textContent = ok ? h.deployment || "Configured" : "Not configured";
+  } catch {
+    $("health-dot").className = "dot bad";
+    $("health-text").textContent = "AI unavailable";
+    $("ai-details-title").textContent = "Institution-controlled AI model access";
+    $("health-institution").textContent = "Unavailable";
+    $("health-model").textContent = "Unavailable";
+  }
+})();
+
+const params = new URLSearchParams(location.search);
+const AUTORUN = params.has("autorun");
+const COMPACT = params.has("compact");
+document.body.classList.toggle("compact", COMPACT);
+const updateCount = () => { $("charcount").textContent = $("text").value.length.toLocaleString() + " characters"; };
+
+// Insert text and optionally run analysis.
+function ingest(text, autorun) {
+  if (!text || !text.trim()) return;
+  $("text").value = text;
+  updateCount();
+  if (autorun) analyze();
+}
+
+$("text").addEventListener("input", updateCount);
+$("text").addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); analyze(); }
+});
+
+// Preserve existing text while the user is editing it.
+document.addEventListener("paste", (e) => {
+  if (document.activeElement === $("text") && $("text").value.trim() !== "") return;
+  const pasted = (e.clipboardData || window.clipboardData).getData("text");
+  if (!pasted || !pasted.trim()) return;
+  e.preventDefault();
+  ingest(pasted, true);
+});
+
+// Clipboard access on load may require prior browser permission.
+window.addEventListener("load", async () => {
+  if (!AUTORUN) return;
+  try { ingest(await navigator.clipboard.readText(), true); } catch { /* Ctrl+V remains available. */ }
+});
+
+$("paste").onclick = async () => {
+  try { ingest(await navigator.clipboard.readText(), false); }
+  catch { setStatus("Clipboard permission denied - paste manually or press Ctrl+V."); }
+};
+$("clear").onclick = () => { $("text").value = ""; updateCount(); $("summary").hidden = true; setStatus(""); };
+$("analyze").onclick = analyze;
+$("open-compact").onclick = () => {
+  const url = new URL(location.href);
+  url.searchParams.set("compact", "1");
+  const width = 540;
+  const height = 760;
+  const left = Math.max(0, (screen.availLeft || 0) + screen.availWidth - width - 24);
+  const top = Math.max(0, (screen.availTop || 0) + 24);
+  const popup = window.open(
+    url,
+    "inconsistency-check-compact",
+    `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+  );
+  if (popup) popup.focus();
+};
+
+async function analyze() {
+  const text = $("text").value.trim();
+  $("summary").hidden = true;
+  if (!text) { setStatus("Enter or paste some clinical text first."); return; }
+  $("analyze").disabled = true;
+  $("results").innerHTML = `<div class="state"><span class="spinner"></span>Analyzing&hellip;</div>`;
+  try {
+    const res = await fetch("/api/analyze", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text })
+    });
+    if (!res.ok) {
+      console.error("Analysis request failed", { status: res.status });
+      setStatus(analyzeFailureMessage(res.status));
+      return;
+    }
+    try {
+      const { issues } = await res.json();
+      render(issues || []);
+    } catch (error) {
+      console.error("Analysis response could not be rendered", error);
+      setStatus("The result could not be displayed. Please try again. If the problem continues, contact your local support team.");
+    }
+  } catch (e) {
+    console.error("Analysis service could not be reached", e);
+    setStatus("The check is temporarily unavailable. Please try again in a moment. If the problem continues, contact your local support team.");
+  } finally {
+    $("analyze").disabled = false;
+  }
+}
+
+function render(issues) {
+  if (!issues.length) { setStatus("&#10003; No internal inconsistencies flagged."); return; }
+  issues.sort((a, b) => (b.severity || 0) - (a.severity || 0));
+
+  const counts = { high: 0, med: 0, low: 0 };
+  issues.forEach((i) => counts[SEV(i.severity || 0)]++);
+  const labels = { high: "severe (7-9)", med: "relevant (4-6)", low: "minor (1-3)" };
+  $("summary").hidden = false;
+  $("summary").innerHTML =
+    `<span class="chip">${issues.length} finding${issues.length === 1 ? "" : "s"}</span>` +
+    ["high", "med", "low"].filter((k) => counts[k]).map((k) => `<span class="chip ${k}">${counts[k]} ${labels[k]}</span>`).join("");
+
+  $("results").innerHTML = issues.map((i) => {
+    const c = SEV(i.severity || 0);
+    const row = (label, val) => val ? `<dt>${label}</dt><dd>${esc(val)}</dd>` : "";
+    return `<article class="issue ${c}">
+      <div class="issue-head">
+        <h3>${esc(i.description)}</h3>
+        ${i.category ? `<span class="category">${esc(i.category)}</span>` : ""}
+        <span class="severity">severity ${i.severity ?? "?"}</span>
+      </div>
+      <dl>
+        ${row("Context", i.context)}
+        ${row("Rationale", i.rationale)}
+        ${row("Clinical impact", i.clinical_impact)}
+        ${row("Suggested correction", i.correction)}
+      </dl>
+    </article>`;
+  }).join("");
+}
+</script>
+</body>
+</html>

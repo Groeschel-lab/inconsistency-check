@@ -1,0 +1,41 @@
+{
+  "_comment": "English convenience translation of the planted inconsistencies in example 1. It was not used in the study; wording, count, and severity can vary by model.",
+  "planted_inconsistencies": [
+    {
+      "description": "Admission date is after the discharge date",
+      "category": "Temporal",
+      "severity": 6,
+      "note": "Admission is 15 March 2024 and discharge is 10 March 2024, so the stay ends before it begins."
+    },
+    {
+      "description": "CRP is described as decreasing to a higher value",
+      "category": "Content",
+      "severity": 5,
+      "note": "A change from 180 mg/L to 210 mg/L is an increase, not a decrease."
+    },
+    {
+      "description": "Antibiotic prescribed despite a documented penicillin allergy",
+      "category": "Content",
+      "severity": 8,
+      "note": "A penicillin allergy is documented, but amoxicillin, a penicillin, is prescribed."
+    },
+    {
+      "description": "Implausible levothyroxine dose unit",
+      "category": "Content",
+      "severity": 8,
+      "note": "Levothyroxine is dosed in micrograms; 50 mg would be a 1,000-fold overdose."
+    },
+    {
+      "description": "Inconsistent patient gender",
+      "category": "Linguistic",
+      "severity": 3,
+      "note": "The patient is introduced as Mr Max Mustermann, but later referred to as she."
+    },
+    {
+      "description": "Follow-up date is before discharge",
+      "category": "Temporal",
+      "severity": 4,
+      "note": "The appointment is 05 March 2024 and discharge is 10 March 2024, placing follow-up in the past."
+    }
+  ]
+}
