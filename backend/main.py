@@ -5,13 +5,14 @@ import json
 import logging
 import os
 import re
+from typing import Literal
 
 import requests
 from azure.identity import DefaultAzureCredential
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 # Load local settings when python-dotenv is installed.
 try:
@@ -30,6 +31,15 @@ TOKEN_SCOPE = "https://ai.azure.com/.default"  # Azure AI Foundry inference.
 MAX_TOKENS = int(os.environ.get("MAX_COMPLETION_TOKENS", "8000"))
 REQUEST_TIMEOUT = 180
 LOGGER = logging.getLogger(__name__)
+
+_PROMPT_INJECTION_PATTERNS = tuple(
+    re.compile(pattern, re.IGNORECASE | re.DOTALL)
+    for pattern in (
+        r"\b(?:important\s+)?instructions?\s+to\s+(?:the\s+)?(?:ai|assistant|model)\b",
+        r"\b(?:ignore|disregard|forget|override)\b.{0,80}\b(?:all\s+)?(?:previous|prior|above|system|developer)\b.{0,40}\b(?:instructions?|prompts?|rules?)\b",
+        r"\b(?:ignoriere|missachte|vergiss|ueberschreibe)\b.{0,80}\b(?:vorherige|bisherige|obige|system)\b.{0,40}\b(?:anweisungen?|prompt|regeln?)\b",
+    )
+)
 
 _DEFAULT_SYSTEM_PROMPT = """ROLE: Du bist ein System zur Erkennung logischer Unstimmigkeiten in Arztbriefen, um die Qualität zu verbessern.
 
@@ -62,20 +72,33 @@ def _bearer_token() -> str:
     return _credential.get_token(TOKEN_SCOPE).token
 
 
+class ModelIssue(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    description: str
+    context: str
+    category: Literal["Inhalt", "Zeitlich", "Struktur", "Sprachlich", "Sonstige"]
+    severity: int = Field(ge=1, le=9)
+    rationale: str
+    clinical_impact: str
+    correction: str
+
+
+class ModelAnalysisResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    issues: list[ModelIssue]
+
+
+def _contains_prompt_injection(text: str) -> bool:
+    return any(pattern.search(text) for pattern in _PROMPT_INJECTION_PATTERNS)
+
+
 def _extract_issues(content: str) -> list[dict]:
     content = (content or "").strip()
-    if not content:
-        return []
-    try:
-        parsed = json.loads(content)
-    except json.JSONDecodeError:
-        match = re.search(r"\{.*\}", content, re.S)
-        if not match:
-            return []
-        parsed = json.loads(match.group(0))
-    if isinstance(parsed, dict):
-        return parsed.get("issues") or []
-    return parsed if isinstance(parsed, list) else []
+    parsed = json.loads(content)
+    response = ModelAnalysisResponse.model_validate(parsed)
+    return [issue.model_dump() for issue in response.issues]
 
 
 app = FastAPI(title="Inconsistency Check", version="1.0.0")
@@ -131,19 +154,27 @@ def _call_anthropic(headers: dict, text: str) -> str:
 
 @app.post("/api/analyze")
 def analyze(req: AnalyzeRequest) -> dict:
-    if not ENDPOINT or not DEPLOYMENT:
-        LOGGER.error("Model endpoint or deployment is not configured")
-        raise HTTPException(500, "AZURE_AI_ENDPOINT / AZURE_AI_DEPLOYMENT not configured")
     text = (req.text or "").strip()
     if not text:
         raise HTTPException(400, "empty text")
+    if _contains_prompt_injection(text):
+        LOGGER.warning("Rejected text containing suspected prompt injection")
+        raise HTTPException(400, "text contains instructions directed at the model")
+    if not ENDPOINT or not DEPLOYMENT:
+        LOGGER.error("Model endpoint or deployment is not configured")
+        raise HTTPException(500, "AZURE_AI_ENDPOINT / AZURE_AI_DEPLOYMENT not configured")
     headers = {"Authorization": f"Bearer {_bearer_token()}", "Content-Type": "application/json"}
     try:
         content = (_call_anthropic if MODEL_FORMAT.lower() == "anthropic" else _call_openai)(headers, text)
     except requests.RequestException as exc:
         LOGGER.warning("Model request failed: exception=%s", exc.__class__.__name__)
         raise HTTPException(502, f"model call failed: {exc.__class__.__name__}")
-    return {"issues": _extract_issues(content)}
+    try:
+        issues = _extract_issues(content)
+    except (json.JSONDecodeError, ValidationError):
+        LOGGER.warning("Model returned an invalid structured response")
+        raise HTTPException(502, "model returned an invalid response")
+    return {"issues": issues}
 
 
 _FRONTEND = os.path.join(os.path.dirname(__file__), "..", "frontend")
