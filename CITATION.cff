@@ -3,6 +3,7 @@ message: "If you use this software, please cite both the software and the accomp
 title: "Inconsistency Check"
 abstract: "A governed, keyless, one-click-deployable LLM logic check that flags internal inconsistencies in clinical documents."
 type: software
+version: 0.2.0
 repository-code: "https://github.com/groeschel-lab/inconsistency-check"
 license: MIT
 authors:

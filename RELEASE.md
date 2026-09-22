@@ -16,7 +16,11 @@ release, verify the owner in every hard-coded URL:
 - [ ] Rebuild the ARM template if Bicep changed: `az bicep build --file infra/main.bicep --outfile infra/main.json`.
 
 ## Build + smoke test
-- [ ] Tag `v1.0.0` and confirm the `release` workflow attaches `app.zip` to the release.
+- [ ] Refresh the pinned dependency versions in `requirements.txt` (command is in the file header).
+- [ ] Tag `v0.2.0` and confirm the `release` workflow attaches `app.zip` to the release.
+- [ ] **Order matters:** `infra/main.bicep` pins `packageUri` to a specific tag, so the release must
+      exist in `groeschel-lab` *before* `infra/main.json` reaches `main`. Otherwise the deployment
+      button points at a missing asset.
 - [ ] End-to-end test the **Deploy to Azure** button in a real subscription: portal
       wizard → resources created → open the frontend URL → paste an example letter →
       findings render.

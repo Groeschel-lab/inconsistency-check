@@ -4,13 +4,13 @@
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fgroeschel-lab%2Finconsistency-check%2Fmain%2Finfra%2Fmain.json/uiFormDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fgroeschel-lab%2Finconsistency-check%2Fmain%2Finfra%2FuiFormDefinition.json)
 
-Everything is provisioned in **your** tenant. Authentication is **exclusively Managed Identity + RBAC** - no API keys, no connection strings, no Key Vault required. Submitted text is processed **in memory** and not persisted.
+Everything is provisioned in **your** tenant. Authentication is **exclusively Managed Identity + RBAC** - no API keys, no connection strings, no Key Vault required. Submitted text is processed **in memory** and is not persisted by this application (see [Data handling](#data-handling)).
 
 This repository accompanies the case study *"Infrastructure as Code for deployment and governance of medical AI"* (see [Citation](#citation)).
 
 > **Research prototype.** Use only within an organizationally approved setting;
-> qualified clinicians must review every finding. Submitted text is processed
-> in memory and not persisted.
+> qualified clinicians must review every finding. It is not a medical device, is
+> not CE-marked, and must not be used for clinical decision-making.
 
 ---
 
@@ -28,12 +28,6 @@ flowchart LR
 
 ## 1-Click deployment
 
-> **Public repository required.** The deployment button loads the ARM template,
-> portal form, and release package from GitHub without repository authentication.
-> It therefore works only after this repository is public and a release provides
-> the `app.zip` asset. During private staging, code can be uploaded and reviewed
-> normally, but the deployment button will return `404`.
-
 ### Before the click
 | Requirement | Why |
 |---|---|
@@ -45,10 +39,10 @@ flowchart LR
 2. Choose subscription + resource group + region (default `swedencentral`, or `germanywestcentral` / `switzerlandnorth`). Claude Opus (the default model) is only in `swedencentral`.
 3. Set a short unique `nameSuffix` (3-8 lowercase, e.g. `logic1`). Optionally
   add the institution display name used in the AI model access indicator.
-4. **Model** tab: pick one of the paper's five models (see [Models](#models)); capacity is clamped to a safe per-model maximum.
+4. **Model** tab: pick one of the paper's five models (see [Models](#models)); capacity is clamped to a safe per-model maximum. Claude Opus 4.7 is offered only when the region is `swedencentral`, and choosing it additionally asks for the organization details that Anthropic requires.
 5. **Access** tab: use the recommended **Microsoft Entra ID sign-in** default,
-   or deliberately choose **No sign-in** if your IT team will control network
-   access separately (see [Access & authentication](#access--authentication)).
+   or choose **No sign-in** and supply the IP ranges that may reach the app
+   (see [Access & authentication](#access--authentication)).
 6. *Review + create* (~10-15 min).
 
 ### After deployment
@@ -58,7 +52,7 @@ Open the frontend URL from the deployment outputs and paste clinical text - the 
 The **Access** tab offers two options:
 
 - **Require Microsoft Entra ID sign-in (recommended and selected by default).** Built-in authentication (Easy Auth) requires every visitor to sign in with your tenant's Microsoft Entra ID before the app loads. Sign-in is **keyless and set-and-forget**: it uses a managed identity as a federated credential, so there is no client secret to rotate.
-- **No sign-in (configure network access separately).** The template does not add an inbound network restriction to the Function App. Without controls configured by the deploying IT team, the app is publicly reachable. Use this option only for an approved evaluation environment or when separate network controls are in place.
+- **No sign-in (inbound access restricted to an IP allow-list).** You supply one or more IPv4 CIDR ranges; the Function App denies every other source. This suits a hospital network or a jump host. The deployment **fails closed**: if no range is supplied, the app is deployed but reachable by nobody, rather than being left open to the internet.
 
 For the Entra option a tenant administrator does a one-time setup:
 
@@ -105,21 +99,59 @@ itself and load the same `?compact=1` URL.
 
 ## Architecture (keyless by design)
 - **Managed Identity + RBAC** for every model call - the Function App's managed identity holds *Cognitive Services OpenAI User* and *Cognitive Services User* on the Foundry account (assigned in Bicep). No API keys, no Key Vault, no SQL.
-- **In-memory processing** - submitted text is not persisted; logs contain only status codes and durations.
+- **No shared deployment secrets** - FTP and SCM basic publishing credentials are disabled; the app is delivered through `WEBSITE_RUN_FROM_PACKAGE`.
+- **In-memory processing** - the application does not persist submitted text; its logs contain only status codes and durations. Platform-side retention is described in [Data handling](#data-handling).
 - **Infrastructure as Code** - everything in [`infra/main.bicep`](infra/main.bicep); one declarative deployment, reproducible across institutions.
+
+## Data handling
+The application itself stores nothing: text is held in memory for the duration of
+one request, and the logs record only status codes and durations. Two platform
+behaviours are outside this repository's control and must be assessed by the
+deploying institution.
+
+**Abuse monitoring.** Microsoft may store prompts and completions in an abuse
+monitoring data store and have authorized Microsoft employees review content that
+the system flags. That store is logically separated per resource and is located in
+the Azure geography of the Foundry resource. Institutions that cannot permit this
+must apply for **Modified Abuse Monitoring** through Microsoft's Limited Access
+process; eligibility criteria apply and some models are subject to stricter
+criteria. This cannot be configured from a template - it is granted by Microsoft.
+Even with modified abuse monitoring, a short operational retention period remains;
+Microsoft does not offer configurable zero data retention.
+
+**Processing location.** See the note under [Models](#models): all profiles deploy
+as `GlobalStandard`, so inference may run outside the region you select.
+
+Neither behaviour is specific to this tool - both apply to any Foundry deployment -
+but both must be documented in an institutional data-protection assessment before
+clinical text is submitted.
 
 ## Models
 The tool deploys **one** model from the study's validation phase panel, chosen in the wizard (Bicep parameter `modelProfile`). Switching models is a **re-deploy**, no code change. **Claude Opus 4.7 is the default** - it is the paper's validation reference.
 
-| `modelProfile` | Model | Route | Region | Notes |
-|---|---|---|---|---|
-| `claude-opus-4-7` *(default)* | Claude Opus 4.7 | Anthropic | swedencentral only | Paper's validation reference |
-| `gpt-5.5` | GPT-5.5 | OpenAI | EU regions | |
-| `mistral-large-3` | Mistral Large 3 | OpenAI | EU regions | EU model provider |
-| `deepseek-v3.2` | DeepSeek V3.2 | OpenAI | EU regions | Lowest cost |
-| `gpt-5.4-nano` | GPT-5.4-nano | OpenAI | EU regions | Fastest / cheapest OpenAI |
+| `modelProfile` | Model | API route | Deployment type | Retires | Notes |
+|---|---|---|---|---|---|
+| `claude-opus-4-7` *(default)* | Claude Opus 4.7 | Anthropic | `GlobalStandard` | **2027-04-06** | Paper's validation reference; offered in `swedencentral` only |
+| `gpt-5.5` | GPT-5.5 | OpenAI | `GlobalStandard` | 2027-10-26 | `DataZoneStandard` also exists in the catalog |
+| `mistral-large-3` | Mistral Large 3 | OpenAI | `GlobalStandard` | - | EU model provider; `DataZoneStandard` also exists |
+| `deepseek-v3.2` | DeepSeek V3.2 | OpenAI | `GlobalStandard` | - | Lowest cost |
+| `gpt-5.4-nano` | GPT-5.4-nano | OpenAI | `GlobalStandard` | 2027-09-21 | Fastest / cheapest OpenAI; `DataZoneStandard` also exists |
 
-All are served keyless through one Azure AI Foundry resource; the backend routes Claude via the Anthropic API and the rest via the OpenAI-compatible API. Identifiers and versions were verified against the live Foundry catalog in `swedencentral`; the code is open source - edit [`infra/main.bicep`](infra/main.bicep) to add others.
+All are served keyless through one Azure AI Foundry resource; the backend routes Claude via the Anthropic API and the rest via the OpenAI-compatible API. Identifiers, versions, and retirement dates were read from the Azure AI Foundry model catalog on 2026-09-22; the code is open source - edit [`infra/main.bicep`](infra/main.bicep) to add others.
+
+> **Where submitted text is processed.** All five profiles deploy as `GlobalStandard`.
+> Microsoft states that for `Global` deployment types, prompts and responses *may be
+> processed in any geography where the model is deployed*, while data at rest stays in
+> the geography of the Azure resource. The region chosen in the wizard therefore
+> controls where the resource and its data at rest live, **not** where inference runs.
+> The catalog offers the EU-bounded `DataZoneStandard` type for GPT-5.5, Mistral Large 3,
+> and GPT-5.4-nano, but **not** for Claude Opus 4.7 or DeepSeek V3.2. Review this against
+> your institution's data-protection requirements before deploying.
+
+> **Model retirement.** Claude Opus 4.7 - the default and the paper's reference model -
+> retires on **2027-04-06**. After that date a deployment using the default profile fails;
+> select another profile in the wizard or pin a successor in
+> [`infra/modules/llm.bicep`](infra/modules/llm.bicep).
 
 ## Local development
 ```powershell

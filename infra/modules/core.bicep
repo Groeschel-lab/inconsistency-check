@@ -41,6 +41,9 @@ param entraClientId string = ''
 @description('Entra tenant ID for sign-in. Defaults to the deployment tenant.')
 param entraTenantId string = tenant().tenantId
 
+@description('Comma-separated IPv4 CIDR ranges allowed to reach the app when no sign-in is configured. Empty means no inbound access.')
+param allowedIpRanges string = ''
+
 // Built-in role definition IDs.
 var storageBlobDataOwnerRole = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
 var storageQueueDataContributorRole = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
@@ -231,6 +234,15 @@ var functionAppName = 'func-lc-${nameSuffix}'
 // Enable Easy Auth when a client ID is supplied.
 var authEnabled = !empty(entraClientId)
 
+// Without Easy Auth the app is reachable only from these ranges; an empty list denies everyone.
+var ipAllowList = empty(trim(allowedIpRanges)) ? [] : split(replace(trim(allowedIpRanges), ' ', ''), ',')
+var inboundRules = [for (cidr, i) in ipAllowList: {
+  name: 'allow-${i}'
+  ipAddress: cidr
+  action: 'Allow'
+  priority: 100 + i
+}]
+
 // Identity used by the Easy Auth federated credential.
 resource authIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = if (authEnabled) {
   name: 'id-auth-${nameSuffix}'
@@ -263,6 +275,8 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
         allowedOrigins: [ 'https://${functionAppName}.azurewebsites.net' ]
         supportCredentials: false
       }
+      ipSecurityRestrictionsDefaultAction: authEnabled ? 'Allow' : 'Deny'
+      ipSecurityRestrictions: authEnabled ? [] : inboundRules
       appSettings: union([
         { name: 'FUNCTIONS_EXTENSION_VERSION', value: '~4' }
         { name: 'FUNCTIONS_WORKER_RUNTIME', value: 'python' }
@@ -282,6 +296,19 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' = {
     }
   }
   dependsOn: [ storagePeDnsGroups ]
+}
+
+// Publishing credentials are shared secrets; deployment uses WEBSITE_RUN_FROM_PACKAGE instead.
+resource ftpCredentialsPolicy 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-12-01' = {
+  parent: functionApp
+  name: 'ftp'
+  properties: { allow: false }
+}
+
+resource scmCredentialsPolicy 'Microsoft.Web/sites/basicPublishingCredentialsPolicies@2023-12-01' = {
+  parent: functionApp
+  name: 'scm'
+  properties: { allow: false }
 }
 
 // Easy Auth uses the operator-managed app registration documented in the README.

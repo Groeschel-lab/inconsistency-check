@@ -25,7 +25,8 @@ param countryCode string = 'DE'
 @description('Industry for the model provider data.')
 param industry string = 'Healthcare'
 
-// Catalog values to be verified in the target Azure region.
+// Names, versions and formats verified against the Azure AI Foundry model catalog on 2026-09-22.
+// Inference retirement dates: claude-opus-4-7 2027-04-06, gpt-5.4-nano 2027-09-21, gpt-5.5 2027-10-26.
 // maxCapacity clamps the requested deployment capacity.
 var profiles = {
   'claude-opus-4-7': { format: 'Anthropic',  name: 'claude-opus-4-7', version: '1',          sku: 'GlobalStandard', maxCapacity: 40 }
@@ -51,7 +52,7 @@ resource ai 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   }
 }
 
-// This preview API supports Anthropic modelProviderData.
+// Anthropic models set isCustomerInfoRequired, so modelProviderData must identify the deploying organization.
 resource deployment 'Microsoft.CognitiveServices/accounts/deployments@2026-05-15-preview' = {
   parent: ai
   name: p.name

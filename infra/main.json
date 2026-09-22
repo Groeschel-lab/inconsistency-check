@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "13691342867385059593"
+      "templateHash": "4782645903414463628"
     }
   },
   "parameters": {
@@ -102,11 +102,18 @@
         "description": "Entra tenant ID for sign-in. Defaults to the deployment tenant."
       }
     },
+    "allowedIpRanges": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Comma-separated IPv4 CIDR ranges allowed to reach the app when no sign-in is configured. Empty means no inbound access."
+      }
+    },
     "packageUri": {
       "type": "string",
-      "defaultValue": "https://github.com/groeschel-lab/inconsistency-check/releases/latest/download/app.zip",
+      "defaultValue": "https://github.com/groeschel-lab/inconsistency-check/releases/download/v0.2.0/app.zip",
       "metadata": {
-        "description": "Application package (zip). Defaults to the research GitHub release build."
+        "description": "Application package (zip). Defaults to the pinned research GitHub release build."
       }
     },
     "resourceGroupName": {
@@ -170,6 +177,9 @@
           },
           "entraTenantId": {
             "value": "[parameters('entraTenantId')]"
+          },
+          "allowedIpRanges": {
+            "value": "[parameters('allowedIpRanges')]"
           }
         },
         "template": {
@@ -179,7 +189,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.46.1.21595",
-              "templateHash": "12452315787040575475"
+              "templateHash": "11884057850906755171"
             }
           },
           "parameters": {
@@ -273,9 +283,28 @@
               "metadata": {
                 "description": "Entra tenant ID for sign-in. Defaults to the deployment tenant."
               }
+            },
+            "allowedIpRanges": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Comma-separated IPv4 CIDR ranges allowed to reach the app when no sign-in is configured. Empty means no inbound access."
+              }
             }
           },
           "variables": {
+            "copy": [
+              {
+                "name": "inboundRules",
+                "count": "[length(variables('ipAllowList'))]",
+                "input": {
+                  "name": "[format('allow-{0}', copyIndex('inboundRules'))]",
+                  "ipAddress": "[variables('ipAllowList')[copyIndex('inboundRules')]]",
+                  "action": "Allow",
+                  "priority": "[add(100, copyIndex('inboundRules'))]"
+                }
+              }
+            ],
             "storageBlobDataOwnerRole": "b7e6dc6d-f1e8-4753-8033-0f276bb0955b",
             "storageQueueDataContributorRole": "974c5e8b-45b9-4653-ba55-5f855dd0fb88",
             "storageTableDataContributorRole": "0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3",
@@ -296,6 +325,7 @@
             "institutionSetting": "[if(empty(parameters('institutionName')), createArray(), createArray(createObject('name', 'INSTITUTION_NAME', 'value', parameters('institutionName'))))]",
             "functionAppName": "[format('func-lc-{0}', parameters('nameSuffix'))]",
             "authEnabled": "[not(empty(parameters('entraClientId')))]",
+            "ipAllowList": "[if(empty(trim(parameters('allowedIpRanges'))), createArray(), split(replace(trim(parameters('allowedIpRanges')), ' ', ''), ','))]",
             "effectiveTenantId": "[if(empty(parameters('entraTenantId')), tenant().tenantId, parameters('entraTenantId'))]"
           },
           "resources": [
@@ -579,6 +609,8 @@
                     ],
                     "supportCredentials": false
                   },
+                  "ipSecurityRestrictionsDefaultAction": "[if(variables('authEnabled'), 'Allow', 'Deny')]",
+                  "ipSecurityRestrictions": "[if(variables('authEnabled'), createArray(), variables('inboundRules'))]",
                   "appSettings": "[union(createArray(createObject('name', 'FUNCTIONS_EXTENSION_VERSION', 'value', '~4'), createObject('name', 'FUNCTIONS_WORKER_RUNTIME', 'value', 'python'), createObject('name', 'APPLICATIONINSIGHTS_CONNECTION_STRING', 'value', reference(resourceId('Microsoft.Insights/components', format('appi-lc-{0}', parameters('nameSuffix'))), '2020-02-02').ConnectionString), createObject('name', 'AzureWebJobsStorage__accountName', 'value', format('stlc{0}', parameters('nameSuffix'))), createObject('name', 'AzureWebJobsStorage__credential', 'value', 'managedidentity'), createObject('name', 'WEBSITE_RUN_FROM_PACKAGE', 'value', parameters('packageUri')), createObject('name', 'WEBSITE_VNET_ROUTE_ALL', 'value', '0'), createObject('name', 'SCM_DO_BUILD_DURING_DEPLOYMENT', 'value', 'false'), createObject('name', 'WEBSITE_USE_PLACEHOLDER', 'value', '0'), createObject('name', 'AZURE_AI_ENDPOINT', 'value', reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.endpoint.value), createObject('name', 'AZURE_AI_DEPLOYMENT', 'value', reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.deploymentName.value), createObject('name', 'MODEL_FORMAT', 'value', reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.modelFormat.value)), variables('promptSetting'), variables('institutionSetting'), if(variables('authEnabled'), createArray(createObject('name', 'OVERRIDE_USE_MI_FIC_ASSERTION_CLIENTID', 'value', reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-auth-{0}', parameters('nameSuffix'))), '2023-01-31').clientId)), createArray()))]"
                 }
               },
@@ -590,6 +622,28 @@
                 "[resourceId('Microsoft.Storage/storageAccounts', format('stlc{0}', parameters('nameSuffix')))]",
                 "storagePeDnsGroups",
                 "[resourceId('Microsoft.Network/virtualNetworks/subnets', format('vnet-lc-{0}', parameters('nameSuffix')), 'snet-app')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}/{1}', variables('functionAppName'), 'ftp')]",
+              "properties": {
+                "allow": false
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+              "apiVersion": "2023-12-01",
+              "name": "[format('{0}/{1}', variables('functionAppName'), 'scm')]",
+              "properties": {
+                "allow": false
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
               ]
             },
             {

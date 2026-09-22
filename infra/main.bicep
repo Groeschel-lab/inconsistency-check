@@ -41,8 +41,11 @@ param entraClientId string = ''
 @description('Entra tenant ID for sign-in. Defaults to the deployment tenant.')
 param entraTenantId string = tenant().tenantId
 
-@description('Application package (zip). Defaults to the research GitHub release build.')
-param packageUri string = 'https://github.com/groeschel-lab/inconsistency-check/releases/latest/download/app.zip'
+@description('Comma-separated IPv4 CIDR ranges allowed to reach the app when no sign-in is configured. Empty means no inbound access.')
+param allowedIpRanges string = ''
+
+@description('Application package (zip). Defaults to the pinned research GitHub release build.')
+param packageUri string = 'https://github.com/groeschel-lab/inconsistency-check/releases/download/v0.2.0/app.zip'
 
 @description('Resource group to create/use.')
 param resourceGroupName string = 'rg-logiccheck-${nameSuffix}'
@@ -68,6 +71,7 @@ module core 'modules/core.bicep' = {
     packageUri: packageUri
     entraClientId: entraClientId
     entraTenantId: entraTenantId
+    allowedIpRanges: allowedIpRanges
   }
 }
 

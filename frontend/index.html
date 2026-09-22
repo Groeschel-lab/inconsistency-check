@@ -194,8 +194,9 @@
         <dl>
           <dt>Institution</dt><dd id="health-institution">Checking&hellip;</dd>
           <dt>AI model</dt><dd id="health-model">Checking&hellip;</dd>
+          <dt>Analysis prompt</dt><dd id="health-prompt">Checking&hellip;</dd>
           <dt>Model training</dt><dd>Use of this tool does not train the model</dd>
-          <dt>Submitted text</dt><dd>Processed in memory; not persisted by this application</dd>
+          <dt>Submitted text</dt><dd>Not persisted by this application; the AI platform may retain it for abuse monitoring</dd>
         </dl>
       </div>
     </details>
@@ -237,6 +238,14 @@ function setStatus(html, tone) {
   $("results").innerHTML = html ? `<div class="state">${html}</div>` : "";
 }
 
+// Easy Auth answers an expired session with a redirect, which fetch cannot read.
+const loginUrl = () => "/.auth/login/aad?post_login_redirect_uri=" +
+  encodeURIComponent(location.pathname + location.search);
+
+function showSignInRequired() {
+  setStatus(`Your session has expired. <a href="${loginUrl()}">Sign in again</a> - the text stays in the editor.`);
+}
+
 function analyzeFailureMessage(status) {
   if (status === 401) return "Your session has expired. Reload the page and sign in again.";
   if (status === 403) return "You do not have access to this tool. Please contact your local support team.";
@@ -251,7 +260,16 @@ function analyzeFailureMessage(status) {
 // Check backend connectivity.
 (async () => {
   try {
-    const r = await fetch("/api/health");
+    const r = await fetch("/api/health", { redirect: "manual" });
+    if (r.type === "opaqueredirect") {
+      $("health-dot").className = "dot bad";
+      $("health-text").textContent = "Sign-in required";
+      $("ai-details-title").textContent = "Sign-in required";
+      $("health-institution").textContent = "Not signed in";
+      $("health-model").textContent = "Not signed in";
+      $("health-prompt").textContent = "Not signed in";
+      return;
+    }
     const h = await r.json();
     const ok = r.ok && h.endpoint_configured;
     const institution = (h.institution || "").trim();
@@ -261,12 +279,15 @@ function analyzeFailureMessage(status) {
     $("ai-details-title").textContent = accessLabel;
     $("health-institution").textContent = institution || "Deploying institution";
     $("health-model").textContent = ok ? h.deployment || "Configured" : "Not configured";
+    const promptLabel = h.prompt === "reference" ? "Study reference prompt" : "Custom prompt";
+    $("health-prompt").textContent = ok ? promptLabel + (h.prompt_sha256 ? " \u00b7 " + h.prompt_sha256 : "") : "Not configured";
   } catch {
     $("health-dot").className = "dot bad";
     $("health-text").textContent = "AI unavailable";
     $("ai-details-title").textContent = "Institution-controlled AI model access";
     $("health-institution").textContent = "Unavailable";
     $("health-model").textContent = "Unavailable";
+    $("health-prompt").textContent = "Unavailable";
   }
 })();
 
@@ -343,9 +364,14 @@ async function analyze() {
   $("results").innerHTML = `<div class="state"><span class="spinner"></span>Analyzing&hellip;</div>`;
   try {
     const res = await fetch("/api/analyze", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text })
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }), redirect: "manual"
     });
     if (generation !== analysisGeneration) return;
+    if (res.type === "opaqueredirect" || res.status === 401) {
+      showSignInRequired();
+      return;
+    }
     if (!res.ok) {
       console.error("Analysis request failed", { status: res.status });
       setStatus(analyzeFailureMessage(res.status));

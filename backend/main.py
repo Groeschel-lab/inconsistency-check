@@ -1,10 +1,10 @@
 """FastAPI backend for detecting internal inconsistencies in clinical text."""
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
-import re
 from typing import Literal
 
 import requests
@@ -26,20 +26,13 @@ ENDPOINT = os.environ.get("AZURE_AI_ENDPOINT", os.environ.get("AZURE_OPENAI_ENDP
 DEPLOYMENT = os.environ.get("AZURE_AI_DEPLOYMENT", os.environ.get("AZURE_OPENAI_DEPLOYMENT", ""))
 MODEL_FORMAT = os.environ.get("MODEL_FORMAT", "OpenAI")  # Anthropic uses /anthropic/v1/messages.
 INSTITUTION_NAME = os.environ.get("INSTITUTION_NAME", "").strip()
-ALLOWED_ORIGINS = [o for o in os.environ.get("ALLOWED_ORIGINS", "*").split(",") if o] or ["*"]
+# Empty means same-origin only; the app and its frontend are served from one host.
+ALLOWED_ORIGINS = [o.strip() for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 TOKEN_SCOPE = "https://ai.azure.com/.default"  # Azure AI Foundry inference.
 MAX_TOKENS = int(os.environ.get("MAX_COMPLETION_TOKENS", "8000"))
+MAX_INPUT_CHARS = int(os.environ.get("MAX_INPUT_CHARS", "50000"))
 REQUEST_TIMEOUT = 180
 LOGGER = logging.getLogger(__name__)
-
-_PROMPT_INJECTION_PATTERNS = tuple(
-    re.compile(pattern, re.IGNORECASE | re.DOTALL)
-    for pattern in (
-        r"\b(?:important\s+)?instructions?\s+to\s+(?:the\s+)?(?:ai|assistant|model)\b",
-        r"\b(?:ignore|disregard|forget|override)\b.{0,80}\b(?:all\s+)?(?:previous|prior|above|system|developer)\b.{0,40}\b(?:instructions?|prompts?|rules?)\b",
-        r"\b(?:ignoriere|missachte|vergiss|ueberschreibe)\b.{0,80}\b(?:vorherige|bisherige|obige|system)\b.{0,40}\b(?:anweisungen?|prompt|regeln?)\b",
-    )
-)
 
 _DEFAULT_SYSTEM_PROMPT = """ROLE: Du bist ein System zur Erkennung logischer Unstimmigkeiten in Arztbriefen, um die Qualität zu verbessern.
 
@@ -64,6 +57,8 @@ Antworte ausschliesslich als JSON-Objekt exakt in dieser Form:
 Wenn keine Unstimmigkeit vorliegt, gib {"issues": []} zurück."""
 
 SYSTEM_PROMPT = os.environ.get("SYSTEM_PROMPT") or _DEFAULT_SYSTEM_PROMPT
+PROMPT_IS_REFERENCE = SYSTEM_PROMPT == _DEFAULT_SYSTEM_PROMPT
+PROMPT_FINGERPRINT = hashlib.sha256(SYSTEM_PROMPT.encode("utf-8")).hexdigest()[:12]
 
 _credential = DefaultAzureCredential()
 
@@ -90,10 +85,6 @@ class ModelAnalysisResponse(BaseModel):
     issues: list[ModelIssue]
 
 
-def _contains_prompt_injection(text: str) -> bool:
-    return any(pattern.search(text) for pattern in _PROMPT_INJECTION_PATTERNS)
-
-
 def _extract_issues(content: str) -> list[dict]:
     content = (content or "").strip()
     parsed = json.loads(content)
@@ -101,11 +92,35 @@ def _extract_issues(content: str) -> list[dict]:
     return [issue.model_dump() for issue in response.issues]
 
 
-app = FastAPI(title="Inconsistency Check", version="1.0.0")
-app.add_middleware(
-    CORSMiddleware, allow_origins=ALLOWED_ORIGINS,
-    allow_methods=["*"], allow_headers=["*"],
-)
+app = FastAPI(title="Inconsistency Check", version="0.2.0")
+if ALLOWED_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware, allow_origins=ALLOWED_ORIGINS,
+        allow_methods=["*"], allow_headers=["*"],
+    )
+
+_SECURITY_HEADERS = {
+    # The frontend loads no third-party resources, but its script and style are inline.
+    "Content-Security-Policy": (
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+        "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+    ),
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    # Clipboard is left at its default so paste-to-run keeps working.
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+}
+
+
+@app.middleware("http")
+async def _add_security_headers(request, call_next):
+    response = await call_next(request)
+    for header, value in _SECURITY_HEADERS.items():
+        response.headers.setdefault(header, value)
+    return response
 
 
 class AnalyzeRequest(BaseModel):
@@ -116,6 +131,8 @@ class AnalyzeRequest(BaseModel):
 def health() -> dict:
     return {"status": "ok", "deployment": DEPLOYMENT, "format": MODEL_FORMAT,
             "institution": INSTITUTION_NAME,
+            "prompt": "reference" if PROMPT_IS_REFERENCE else "custom",
+            "prompt_sha256": PROMPT_FINGERPRINT,
             "endpoint_configured": bool(ENDPOINT)}
 
 
@@ -157,9 +174,8 @@ def analyze(req: AnalyzeRequest) -> dict:
     text = (req.text or "").strip()
     if not text:
         raise HTTPException(400, "empty text")
-    if _contains_prompt_injection(text):
-        LOGGER.warning("Rejected text containing suspected prompt injection")
-        raise HTTPException(400, "text contains instructions directed at the model")
+    if len(text) > MAX_INPUT_CHARS:
+        raise HTTPException(413, f"text exceeds {MAX_INPUT_CHARS} characters")
     if not ENDPOINT or not DEPLOYMENT:
         LOGGER.error("Model endpoint or deployment is not configured")
         raise HTTPException(500, "AZURE_AI_ENDPOINT / AZURE_AI_DEPLOYMENT not configured")
