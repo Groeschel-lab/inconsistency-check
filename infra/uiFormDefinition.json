@@ -1,0 +1,260 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2021-09-09/uiFormDefinition.schema.json",
+  "view": {
+    "kind": "Form",
+    "properties": {
+      "title": "Inconsistency Check",
+      "steps": [
+        {
+          "name": "basics",
+          "label": "Basics",
+          "elements": [
+            {
+              "name": "scope",
+              "type": "Microsoft.Common.ResourceScope",
+              "location": {
+                "resourceTypes": [
+                  "Microsoft.CognitiveServices/accounts",
+                  "Microsoft.Web/sites"
+                ],
+                "allowedValues": [
+                  "swedencentral",
+                  "germanywestcentral",
+                  "switzerlandnorth"
+                ]
+              }
+            },
+            {
+              "name": "nameSuffix",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Name suffix",
+              "toolTip": "3-8 lowercase letters/digits, unique in your subscription (e.g. logic1).",
+              "constraints": {
+                "required": true,
+                "regex": "^[a-z0-9]{3,8}$",
+                "validationMessage": "Use 3-8 lowercase letters or digits."
+              }
+            },
+            {
+              "name": "institutionName",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Institution display name (optional)",
+              "defaultValue": "",
+              "toolTip": "Shown in the AI model access indicator, for example: Sample Hospital. Empty uses a generic institution-controlled label.",
+              "constraints": {
+                "required": false,
+                "regex": "^.{0,60}$",
+                "validationMessage": "Use no more than 60 characters."
+              }
+            }
+          ]
+        },
+        {
+          "name": "model",
+          "label": "Model",
+          "elements": [
+            {
+              "name": "modelInfo",
+              "type": "Microsoft.Common.InfoBox",
+              "visible": true,
+              "options": {
+                "icon": "Info",
+                "text": "Pick a model profile. You can switch models later by re-deploying - no code change. Every profile deploys as GlobalStandard, so prompts may be processed in any geography where the model is available."
+              }
+            },
+            {
+              "name": "modelProfileSwedencentral",
+              "type": "Microsoft.Common.DropDown",
+              "label": "Model",
+              "visible": "[equals(steps('basics').scope.location.name, 'swedencentral')]",
+              "toolTip": "Which of the paper's five models the logic check runs on.",
+              "constraints": {
+                "required": true,
+                "allowedValues": [
+                  { "label": "Claude Opus 4.7 - validation reference (retires 2027-04-06)", "value": "claude-opus-4-7" },
+                  { "label": "GPT-5.5 (retires 2027-10-26)", "value": "gpt-5.5" },
+                  { "label": "Mistral Large 3 (EU provider)", "value": "mistral-large-3" },
+                  { "label": "DeepSeek V3.2 (lowest cost)", "value": "deepseek-v3.2" },
+                  { "label": "GPT-5.4-nano (fastest OpenAI, retires 2027-09-21)", "value": "gpt-5.4-nano" }
+                ]
+              }
+            },
+            {
+              "name": "modelProfileOther",
+              "type": "Microsoft.Common.DropDown",
+              "label": "Model",
+              "visible": "[not(equals(steps('basics').scope.location.name, 'swedencentral'))]",
+              "toolTip": "Claude Opus 4.7 is offered in swedencentral only. Choose swedencentral on the Basics tab to select it.",
+              "constraints": {
+                "required": true,
+                "allowedValues": [
+                  { "label": "GPT-5.5 (retires 2027-10-26)", "value": "gpt-5.5" },
+                  { "label": "Mistral Large 3 (EU provider)", "value": "mistral-large-3" },
+                  { "label": "DeepSeek V3.2 (lowest cost)", "value": "deepseek-v3.2" },
+                  { "label": "GPT-5.4-nano (fastest OpenAI, retires 2027-09-21)", "value": "gpt-5.4-nano" }
+                ]
+              }
+            },
+            {
+              "name": "providerDataInfo",
+              "type": "Microsoft.Common.InfoBox",
+              "visible": "[and(equals(steps('basics').scope.location.name, 'swedencentral'), equals(steps('model').modelProfileSwedencentral, 'claude-opus-4-7'))]",
+              "options": {
+                "icon": "Info",
+                "text": "Anthropic requires the deploying organization to be identified. These values are sent to the model provider as part of the deployment, not with individual requests."
+              }
+            },
+            {
+              "name": "organizationName",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Organization name",
+              "defaultValue": "",
+              "visible": "[and(equals(steps('basics').scope.location.name, 'swedencentral'), equals(steps('model').modelProfileSwedencentral, 'claude-opus-4-7'))]",
+              "toolTip": "The organization deploying this tool, for example the hospital or institute name.",
+              "constraints": {
+                "required": "[and(equals(steps('basics').scope.location.name, 'swedencentral'), equals(steps('model').modelProfileSwedencentral, 'claude-opus-4-7'))]",
+                "regex": "^.{1,100}$",
+                "validationMessage": "Enter the deploying organization's name (up to 100 characters)."
+              }
+            },
+            {
+              "name": "countryCode",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Country code (ISO 3166 alpha-2)",
+              "defaultValue": "DE",
+              "visible": "[and(equals(steps('basics').scope.location.name, 'swedencentral'), equals(steps('model').modelProfileSwedencentral, 'claude-opus-4-7'))]",
+              "toolTip": "Two-letter country code of the deploying organization, for example DE, AT, or CH.",
+              "constraints": {
+                "required": "[and(equals(steps('basics').scope.location.name, 'swedencentral'), equals(steps('model').modelProfileSwedencentral, 'claude-opus-4-7'))]",
+                "regex": "^[A-Za-z]{2}$",
+                "validationMessage": "Use a two-letter ISO 3166 country code, for example DE."
+              }
+            },
+            {
+              "name": "industry",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Industry",
+              "defaultValue": "Healthcare",
+              "visible": "[and(equals(steps('basics').scope.location.name, 'swedencentral'), equals(steps('model').modelProfileSwedencentral, 'claude-opus-4-7'))]",
+              "toolTip": "Industry of the deploying organization.",
+              "constraints": {
+                "required": "[and(equals(steps('basics').scope.location.name, 'swedencentral'), equals(steps('model').modelProfileSwedencentral, 'claude-opus-4-7'))]",
+                "regex": "^.{1,60}$",
+                "validationMessage": "Enter an industry (up to 60 characters)."
+              }
+            },
+            {
+              "name": "modelCapacity",
+              "type": "Microsoft.Common.Slider",
+              "label": "Model capacity (thousands of tokens per minute)",
+              "min": 1,
+              "max": 200,
+              "defaultValue": 20,
+              "toolTip": "Requested capacity (thousands of tokens/min). Clamped to a safe per-model maximum, so a low value is fine for a first deploy."
+            },
+            {
+              "name": "promptInfo",
+              "type": "Microsoft.Common.InfoBox",
+              "visible": true,
+              "options": {
+                "icon": "Info",
+                "text": "The study's German v4_judge system prompt is the default. Leave the box empty to reproduce the paper, or paste an alternative such as the English translation in the README."
+              }
+            },
+            {
+              "name": "systemPrompt",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Custom system prompt (optional)",
+              "multiLine": true,
+              "defaultValue": "",
+              "toolTip": "Overrides the built-in German v4_judge prompt. Empty = paper default.",
+              "constraints": { "required": false }
+            }
+          ]
+        },
+        {
+          "name": "access",
+          "label": "Access",
+          "elements": [
+            {
+              "name": "authInfo",
+              "type": "Microsoft.Common.InfoBox",
+              "visible": true,
+              "options": {
+                "icon": "Info",
+                "text": "Microsoft Entra ID sign-in is the recommended default. Choosing 'No sign-in' requires an IP allow-list; the app is then reachable only from those ranges and from nowhere else."
+              }
+            },
+            {
+              "name": "authMode",
+              "type": "Microsoft.Common.OptionsGroup",
+              "label": "User sign-in",
+              "defaultValue": "Require Microsoft Entra ID sign-in (recommended)",
+              "toolTip": "Whether visitors must sign in with Microsoft Entra ID before using the app.",
+              "constraints": {
+                "required": true,
+                "allowedValues": [
+                  { "label": "Require Microsoft Entra ID sign-in (recommended)", "value": "entra" },
+                  { "label": "No sign-in - restrict inbound access to an IP allow-list", "value": "none" }
+                ]
+              }
+            },
+            {
+              "name": "entraClientId",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Application (client) ID",
+              "visible": "[equals(steps('access').authMode, 'entra')]",
+              "toolTip": "The app registration's Application (client) ID. An administrator creates it beforehand (see README).",
+              "constraints": {
+                "required": "[equals(steps('access').authMode, 'entra')]",
+                "regex": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+                "validationMessage": "Enter the Application (client) ID (a GUID)."
+              }
+            },
+            {
+              "name": "entraTenantId",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Directory (tenant) ID (optional)",
+              "visible": "[equals(steps('access').authMode, 'entra')]",
+              "defaultValue": "",
+              "toolTip": "Leave empty to use the tenant you are deploying into.",
+              "constraints": { "required": false }
+            },
+            {
+              "name": "allowedIpRanges",
+              "type": "Microsoft.Common.TextBox",
+              "label": "Allowed IP ranges (IPv4 CIDR, comma-separated)",
+              "visible": "[equals(steps('access').authMode, 'none')]",
+              "defaultValue": "",
+              "toolTip": "Only these ranges may reach the app, for example 10.0.0.0/8,192.0.2.15/32. Every other source is denied.",
+              "constraints": {
+                "required": "[equals(steps('access').authMode, 'none')]",
+                "regex": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/([1-9]|[12][0-9]|3[0-2])( *, *([0-9]{1,3}\\.){3}[0-9]{1,3}/([1-9]|[12][0-9]|3[0-2]))*$",
+                "validationMessage": "Enter one or more IPv4 CIDR ranges with a prefix between /1 and /32, for example 10.0.0.0/8,192.0.2.15/32. A /0 range would admit the entire internet and is rejected."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "outputs": {
+      "kind": "Subscription",
+      "location": "[steps('basics').scope.location.name]",
+      "subscriptionId": "[steps('basics').scope.subscription.id]",
+      "parameters": {
+        "location": "[steps('basics').scope.location.name]",
+        "nameSuffix": "[steps('basics').nameSuffix]",
+        "institutionName": "[steps('basics').institutionName]",
+        "modelProfile": "[if(equals(steps('basics').scope.location.name, 'swedencentral'), steps('model').modelProfileSwedencentral, steps('model').modelProfileOther)]",
+        "modelCapacity": "[steps('model').modelCapacity]",
+        "organizationName": "[steps('model').organizationName]",
+        "countryCode": "[steps('model').countryCode]",
+        "industry": "[steps('model').industry]",
+        "systemPrompt": "[steps('model').systemPrompt]",
+        "entraClientId": "[if(equals(steps('access').authMode, 'entra'), steps('access').entraClientId, '')]",
+        "entraTenantId": "[if(equals(steps('access').authMode, 'entra'), steps('access').entraTenantId, '')]",
+        "allowedIpRanges": "[if(equals(steps('access').authMode, 'none'), steps('access').allowedIpRanges, '')]"
+      }
+    }
+  }
+}

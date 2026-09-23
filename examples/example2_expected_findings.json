@@ -1,0 +1,17 @@
+{
+  "_comment": "Illustrative planted inconsistencies for example2_discharge_letter.txt (synthetic, fictional). A capable model should surface at least these; exact wording, count, and severity vary by model.",
+  "planted_inconsistencies": [
+    {
+      "description": "Medikament trotz dokumentierter Unverträglichkeit verordnet",
+      "category": "Inhalt",
+      "severity": 7,
+      "note": "'Bei bekannter Ciprofloxacin-Unverträglichkeit' und dennoch Therapie mit Ciprofloxacin."
+    },
+    {
+      "description": "Widerspruch zum Fieberverlauf",
+      "category": "Inhalt",
+      "severity": 5,
+      "note": "'Während des gesamten Aufenthalts fieberfrei', aber 'bei Aufnahme bestand Fieber bis 38,8 °C'."
+    }
+  ]
+}

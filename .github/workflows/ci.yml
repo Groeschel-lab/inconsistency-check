@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Byte-compile backend
+        run: python -m compileall -q backend
+      - name: Import smoke test
+        run: python -c "import backend.main; print('import ok')"
+      - name: Run tests
+        run: python -m unittest discover -s tests
+
+  bicep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Bicep (validates infra/main.bicep)
+        run: az bicep build --file infra/main.bicep --stdout > /dev/null
+
+  json:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JSON files parse
+        run: |
+          for f in infra/main.json infra/uiFormDefinition.json examples/*.json; do
+            python -c "import json,sys; json.load(open(sys.argv[1], encoding='utf-8')); print('ok', sys.argv[1])" "$f"
+          done
