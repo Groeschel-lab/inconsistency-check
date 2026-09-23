@@ -25,18 +25,24 @@ param countryCode string = 'DE'
 @description('Industry for the model provider data.')
 param industry string = 'Healthcare'
 
+@description('Preferred deployment type. DataZoneStandard keeps inference inside the EU data zone; ignored by models that do not offer it.')
+@allowed([ 'DataZoneStandard', 'GlobalStandard' ])
+param modelDeploymentType string = 'DataZoneStandard'
+
 // Names, versions and formats verified against the Azure AI Foundry model catalog on 2026-09-22.
 // Inference retirement dates: claude-opus-4-7 2027-04-06, gpt-5.4-nano 2027-09-21, gpt-5.5 2027-10-26.
+// dataZoneCapable records which models the catalog offers as DataZoneStandard.
 // maxCapacity clamps the requested deployment capacity.
 var profiles = {
-  'claude-opus-4-7': { format: 'Anthropic',  name: 'claude-opus-4-7', version: '1',          sku: 'GlobalStandard', maxCapacity: 40 }
-  'gpt-5.5':         { format: 'OpenAI',      name: 'gpt-5.5',         version: '2026-04-24', sku: 'GlobalStandard', maxCapacity: 1000 }
-  'mistral-large-3': { format: 'Mistral AI',  name: 'Mistral-Large-3', version: '1',          sku: 'GlobalStandard', maxCapacity: 20 }
-  'deepseek-v3.2':   { format: 'DeepSeek',    name: 'DeepSeek-V3.2',   version: '1',          sku: 'GlobalStandard', maxCapacity: 20 }
-  'gpt-5.4-nano':    { format: 'OpenAI',      name: 'gpt-5.4-nano',    version: '2026-03-17', sku: 'GlobalStandard', maxCapacity: 5000 }
+  'claude-opus-4-7': { format: 'Anthropic',  name: 'claude-opus-4-7', version: '1',          dataZoneCapable: false, maxCapacity: 40 }
+  'gpt-5.5':         { format: 'OpenAI',      name: 'gpt-5.5',         version: '2026-04-24', dataZoneCapable: true,  maxCapacity: 1000 }
+  'mistral-large-3': { format: 'Mistral AI',  name: 'Mistral-Large-3', version: '1',          dataZoneCapable: true,  maxCapacity: 20 }
+  'deepseek-v3.2':   { format: 'DeepSeek',    name: 'DeepSeek-V3.2',   version: '1',          dataZoneCapable: false, maxCapacity: 20 }
+  'gpt-5.4-nano':    { format: 'OpenAI',      name: 'gpt-5.4-nano',    version: '2026-03-17', dataZoneCapable: true,  maxCapacity: 5000 }
 }
 var p = profiles[modelProfile]
 var effectiveCapacity = min(modelCapacity, p.maxCapacity)
+var effectiveSku = (modelDeploymentType == 'DataZoneStandard' && p.dataZoneCapable) ? 'DataZoneStandard' : 'GlobalStandard'
 
 resource ai 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   name: 'aif-${nameSuffix}'
@@ -56,7 +62,7 @@ resource ai 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
 resource deployment 'Microsoft.CognitiveServices/accounts/deployments@2026-05-15-preview' = {
   parent: ai
   name: p.name
-  sku: { name: p.sku, capacity: effectiveCapacity }
+  sku: { name: effectiveSku, capacity: effectiveCapacity }
   // Bicep types do not yet expose modelProviderData.
   properties: p.format == 'Anthropic' ? {
     model: { format: p.format, name: p.name, version: p.version }
@@ -77,4 +83,5 @@ output accountName string = ai.name
 output endpoint string = 'https://aif-${nameSuffix}.services.ai.azure.com'
 output deploymentName string = p.name
 output modelFormat string = p.format
-output modelLabel string = '${p.format} ${p.name}@${p.version} (${p.sku})'
+output deploymentType string = effectiveSku
+output modelLabel string = '${p.format} ${p.name}@${p.version} (${effectiveSku})'

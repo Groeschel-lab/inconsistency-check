@@ -96,6 +96,29 @@
               }
             },
             {
+              "name": "modelDeploymentType",
+              "type": "Microsoft.Common.OptionsGroup",
+              "label": "Where prompts may be processed",
+              "defaultValue": "EU data zone - recommended",
+              "toolTip": "DataZoneStandard keeps inference inside the EU data zone. GlobalStandard may process prompts in any geography where the model runs.",
+              "constraints": {
+                "required": true,
+                "allowedValues": [
+                  { "label": "EU data zone - recommended", "value": "DataZoneStandard" },
+                  { "label": "Global - may process prompts outside the EU", "value": "GlobalStandard" }
+                ]
+              }
+            },
+            {
+              "name": "deploymentTypeInfo",
+              "type": "Microsoft.Common.InfoBox",
+              "visible": true,
+              "options": {
+                "icon": "Warning",
+                "text": "Claude Opus 4.7 and DeepSeek V3.2 are offered as GlobalStandard only and fall back to it. The EU data zone draws on a separate quota; if the deployment fails for lack of capacity, retry with Global."
+              }
+            },
+            {
               "name": "providerDataInfo",
               "type": "Microsoft.Common.InfoBox",
               "visible": "[and(equals(steps('basics').scope.location.name, 'swedencentral'), equals(steps('model').modelProfileSwedencentral, 'claude-opus-4-7'))]",
@@ -247,6 +270,7 @@
         "institutionName": "[steps('basics').institutionName]",
         "modelProfile": "[if(equals(steps('basics').scope.location.name, 'swedencentral'), steps('model').modelProfileSwedencentral, steps('model').modelProfileOther)]",
         "modelCapacity": "[steps('model').modelCapacity]",
+        "modelDeploymentType": "[steps('model').modelDeploymentType]",
         "organizationName": "[steps('model').organizationName]",
         "countryCode": "[steps('model').countryCode]",
         "industry": "[steps('model').industry]",

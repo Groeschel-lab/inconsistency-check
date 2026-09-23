@@ -39,7 +39,7 @@ flowchart LR
 2. Choose subscription + resource group + region (default `swedencentral`, or `germanywestcentral` / `switzerlandnorth`). Claude Opus (the default model) is only in `swedencentral`.
 3. Set a short unique `nameSuffix` (3-8 lowercase, e.g. `logic1`). Optionally
   add the institution display name used in the AI model access indicator.
-4. **Model** tab: pick one of the paper's five models (see [Models](#models)); capacity is clamped to a safe per-model maximum. Claude Opus 4.7 is offered only when the region is `swedencentral`, and choosing it additionally asks for the organization details that Anthropic requires.
+4. **Model** tab: pick one of the paper's five models (see [Models](#models)); capacity is clamped to a safe per-model maximum. Claude Opus 4.7 is offered only when the region is `swedencentral`, and choosing it additionally asks for the organization details that Anthropic requires. **Where prompts may be processed** defaults to the EU data zone.
 5. **Access** tab: use the recommended **Microsoft Entra ID sign-in** default,
    or choose **No sign-in** and supply the IP ranges that may reach the app
    (see [Access & authentication](#access--authentication)).
@@ -78,9 +78,8 @@ $principal = az identity show -g "rg-logiccheck-$suffix" -n "id-auth-$suffix" --
 
 `$issuer` is the `authFederationIssuer` output, `$principal` the
 `authIdentityPrincipalId` output - the **object (principal) ID of the managed
-identity**, not a client ID. Then register the credential. On Windows, write the
-JSON to a file rather than passing it inline; `az` is a batch file there and
-mangles embedded quotes:
+identity**, not a client ID. Then register the credential. Pass the JSON as a file
+rather than inline: on Windows `az` is a batch file and mangles embedded quotes.
 
 ```powershell
 @{
@@ -95,16 +94,8 @@ Remove-Item fic.json
 ```
 
 The quotes around `"@fic.json"` are required - unquoted, PowerShell reads a
-leading `@` as the splatting operator.
-
-```bash
-az ad app federated-credential create --id <application-client-id> --parameters '{
-  "name": "inconsistency-check",
-  "issuer": "<authFederationIssuer>",
-  "subject": "<authIdentityPrincipalId>",
-  "audiences": ["api://AzureADTokenExchange"]
-}'
-```
+leading `@` as the splatting operator. The same `--parameters "@fic.json"` call
+works from bash or Azure Cloud Shell; only the way you write the file differs.
 
 Nothing expires afterwards. Access to the model stays keyless either way; this gate only controls who may open the app.
 
@@ -189,8 +180,9 @@ criteria. This cannot be configured from a template - it is granted by Microsoft
 Even with modified abuse monitoring, a short operational retention period remains;
 Microsoft does not offer configurable zero data retention.
 
-**Processing location.** See the note under [Models](#models): all profiles deploy
-as `GlobalStandard`, so inference may run outside the region you select.
+**Processing location.** See the note under [Models](#models): the wizard defaults to
+the EU data zone, but Claude Opus 4.7 and DeepSeek V3.2 are only offered as
+`GlobalStandard` and may be processed outside the EU.
 
 Neither behaviour is specific to this tool - both apply to any Foundry deployment -
 but both must be documented in an institutional data-protection assessment before
@@ -199,24 +191,24 @@ clinical text is submitted.
 ## Models
 The tool deploys **one** model from the study's validation phase panel, chosen in the wizard (Bicep parameter `modelProfile`). Switching models is a **re-deploy**, no code change. **Claude Opus 4.7 is the default** - it is the paper's validation reference.
 
-| `modelProfile` | Model | API route | Deployment type | Retires | Notes |
+| `modelProfile` | Model | API route | EU data zone | Retires | Notes |
 |---|---|---|---|---|---|
-| `claude-opus-4-7` *(default)* | Claude Opus 4.7 | Anthropic | `GlobalStandard` | **2027-04-06** | Paper's validation reference; offered in `swedencentral` only |
-| `gpt-5.5` | GPT-5.5 | OpenAI | `GlobalStandard` | 2027-10-26 | `DataZoneStandard` also exists in the catalog |
-| `mistral-large-3` | Mistral Large 3 | OpenAI | `GlobalStandard` | - | EU model provider; `DataZoneStandard` also exists |
-| `deepseek-v3.2` | DeepSeek V3.2 | OpenAI | `GlobalStandard` | - | Lowest cost |
-| `gpt-5.4-nano` | GPT-5.4-nano | OpenAI | `GlobalStandard` | 2027-09-21 | Fastest / cheapest OpenAI; `DataZoneStandard` also exists |
+| `claude-opus-4-7` *(default)* | Claude Opus 4.7 | Anthropic | no - `GlobalStandard` only | **2027-04-06** | Paper's validation reference; offered in `swedencentral` only |
+| `gpt-5.5` | GPT-5.5 | OpenAI | yes | 2027-10-26 | |
+| `mistral-large-3` | Mistral Large 3 | OpenAI | yes | - | EU model provider |
+| `deepseek-v3.2` | DeepSeek V3.2 | OpenAI | no - `GlobalStandard` only | - | Lowest cost |
+| `gpt-5.4-nano` | GPT-5.4-nano | OpenAI | yes | 2027-09-21 | Fastest / cheapest OpenAI |
 
 All are served keyless through one Azure AI Foundry resource; the backend routes Claude via the Anthropic API and the rest via the OpenAI-compatible API. Identifiers, versions, and retirement dates were read from the Azure AI Foundry model catalog on 2026-09-22; the code is open source - edit [`infra/main.bicep`](infra/main.bicep) to add others.
 
-> **Where submitted text is processed.** All five profiles deploy as `GlobalStandard`.
-> Microsoft states that for `Global` deployment types, prompts and responses *may be
-> processed in any geography where the model is deployed*, while data at rest stays in
-> the geography of the Azure resource. The region chosen in the wizard therefore
-> controls where the resource and its data at rest live, **not** where inference runs.
-> The catalog offers the EU-bounded `DataZoneStandard` type for GPT-5.5, Mistral Large 3,
-> and GPT-5.4-nano, but **not** for Claude Opus 4.7 or DeepSeek V3.2. Review this against
-> your institution's data-protection requirements before deploying.
+> **Where submitted text is processed.** The wizard defaults to the **EU data zone**
+> (`DataZoneStandard`), so prompts and responses are processed within the Azure EU Data
+> Boundary. Two models do not offer that type - **Claude Opus 4.7** and **DeepSeek V3.2**
+> are `GlobalStandard` only, and Microsoft states that for `Global` types prompts *may be
+> processed in any geography where the model is deployed*. Choosing either of those two
+> therefore means non-EU processing is possible, whatever the wizard is set to. Data at
+> rest always stays in the geography of the Azure resource. The EU data zone draws on a
+> separate quota; if a deployment fails for lack of capacity, retry with `GlobalStandard`.
 
 > **Model retirement.** Claude Opus 4.7 - the default and the paper's reference model -
 > retires on **2027-04-06**. After that date a deployment using the default profile fails;

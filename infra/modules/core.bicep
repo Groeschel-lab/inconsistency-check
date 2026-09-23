@@ -16,6 +16,10 @@ param modelProfile string
 @minValue(1)
 param modelCapacity int = 20
 
+@description('Preferred deployment type. DataZoneStandard keeps inference inside the EU data zone; ignored by models that do not offer it.')
+@allowed([ 'DataZoneStandard', 'GlobalStandard' ])
+param modelDeploymentType string = 'DataZoneStandard'
+
 @description('Organization name for the model provider data.')
 param organizationName string = 'Healthcare organization'
 
@@ -129,6 +133,7 @@ module llm './llm.bicep' = {
     nameSuffix: nameSuffix
     modelProfile: modelProfile
     modelCapacity: modelCapacity
+    modelDeploymentType: modelDeploymentType
     organizationName: organizationName
     countryCode: countryCode
     industry: industry
@@ -400,6 +405,7 @@ output functionAppUrl string = 'https://${functionApp.properties.defaultHostName
 output foundryEndpoint string = llm.outputs.endpoint
 output modelDeployment string = llm.outputs.deploymentName
 output modelLabel string = llm.outputs.modelLabel
+output modelDeploymentType string = llm.outputs.deploymentType
 output authIdentityClientId string = authEnabled ? authIdentity!.properties.clientId : ''
 output authIdentityPrincipalId string = authEnabled ? authIdentity!.properties.principalId : ''
 output authFederationIssuer string = authEnabled ? '${environment().authentication.loginEndpoint}${tenant().tenantId}/v2.0' : ''

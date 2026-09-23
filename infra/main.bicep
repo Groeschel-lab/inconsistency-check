@@ -19,6 +19,10 @@ param modelProfile string = 'claude-opus-4-7'
 @maxValue(500)
 param modelCapacity int = 20
 
+@description('Preferred deployment type. DataZoneStandard keeps inference inside the EU data zone; Claude Opus 4.7 and DeepSeek V3.2 are only offered as GlobalStandard and fall back to it.')
+@allowed([ 'DataZoneStandard', 'GlobalStandard' ])
+param modelDeploymentType string = 'DataZoneStandard'
+
 @description('Organization name for the model provider data.')
 param organizationName string = 'Healthcare organization'
 
@@ -63,6 +67,7 @@ module core 'modules/core.bicep' = {
     nameSuffix: nameSuffix
     modelProfile: modelProfile
     modelCapacity: modelCapacity
+    modelDeploymentType: modelDeploymentType
     organizationName: organizationName
     countryCode: countryCode
     industry: industry
@@ -79,6 +84,7 @@ output functionAppUrl string = core.outputs.functionAppUrl
 output foundryEndpoint string = core.outputs.foundryEndpoint
 output modelDeployment string = core.outputs.modelDeployment
 output modelLabel string = core.outputs.modelLabel
+output modelDeploymentType string = core.outputs.modelDeploymentType
 output authIdentityClientId string = core.outputs.authIdentityClientId
 output authIdentityPrincipalId string = core.outputs.authIdentityPrincipalId
 output authFederationIssuer string = core.outputs.authFederationIssuer

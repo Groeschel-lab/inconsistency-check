@@ -14,8 +14,9 @@ issue for security reports. We aim to acknowledge reports within a few business 
   codes and durations. The model platform may still retain prompts and completions
   for abuse monitoring - see the *Data handling* section of the README.
 - **Tenant-contained.** Everything is provisioned inside your own Azure tenant via
-  Infrastructure as Code. Note that the model deployments use the `GlobalStandard`
-  type, so inference may be processed outside the selected region.
+  Infrastructure as Code. Model deployments default to the EU data zone
+  (`DataZoneStandard`); Claude Opus 4.7 and DeepSeek V3.2 are only offered as
+  `GlobalStandard` and may be processed outside the EU.
 
 ## Intended use
 **Research prototype.** Use only within an organizationally approved setting;

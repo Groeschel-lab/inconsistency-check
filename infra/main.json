@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "4782645903414463628"
+      "templateHash": "15100309904377548615"
     }
   },
   "parameters": {
@@ -50,6 +50,17 @@
       "maxValue": 500,
       "metadata": {
         "description": "Requested model capacity (thousands of tokens/min); clamped to a safe per-model maximum."
+      }
+    },
+    "modelDeploymentType": {
+      "type": "string",
+      "defaultValue": "DataZoneStandard",
+      "allowedValues": [
+        "DataZoneStandard",
+        "GlobalStandard"
+      ],
+      "metadata": {
+        "description": "Preferred deployment type. DataZoneStandard keeps inference inside the EU data zone; Claude Opus 4.7 and DeepSeek V3.2 are only offered as GlobalStandard and fall back to it."
       }
     },
     "organizationName": {
@@ -154,6 +165,9 @@
           "modelCapacity": {
             "value": "[parameters('modelCapacity')]"
           },
+          "modelDeploymentType": {
+            "value": "[parameters('modelDeploymentType')]"
+          },
           "organizationName": {
             "value": "[parameters('organizationName')]"
           },
@@ -189,7 +203,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.46.1.21595",
-              "templateHash": "11884057850906755171"
+              "templateHash": "5642970051799648469"
             }
           },
           "parameters": {
@@ -226,6 +240,17 @@
               "minValue": 1,
               "metadata": {
                 "description": "Requested model capacity (thousands of tokens/min); clamped to a safe per-model maximum."
+              }
+            },
+            "modelDeploymentType": {
+              "type": "string",
+              "defaultValue": "DataZoneStandard",
+              "allowedValues": [
+                "DataZoneStandard",
+                "GlobalStandard"
+              ],
+              "metadata": {
+                "description": "Preferred deployment type. DataZoneStandard keeps inference inside the EU data zone; ignored by models that do not offer it."
               }
             },
             "organizationName": {
@@ -781,6 +806,9 @@
                   "modelCapacity": {
                     "value": "[parameters('modelCapacity')]"
                   },
+                  "modelDeploymentType": {
+                    "value": "[parameters('modelDeploymentType')]"
+                  },
                   "organizationName": {
                     "value": "[parameters('organizationName')]"
                   },
@@ -798,7 +826,7 @@
                     "_generator": {
                       "name": "bicep",
                       "version": "0.46.1.21595",
-                      "templateHash": "12969234543637383992"
+                      "templateHash": "16858614056824571661"
                     }
                   },
                   "parameters": {
@@ -857,6 +885,17 @@
                       "metadata": {
                         "description": "Industry for the model provider data."
                       }
+                    },
+                    "modelDeploymentType": {
+                      "type": "string",
+                      "defaultValue": "DataZoneStandard",
+                      "allowedValues": [
+                        "DataZoneStandard",
+                        "GlobalStandard"
+                      ],
+                      "metadata": {
+                        "description": "Preferred deployment type. DataZoneStandard keeps inference inside the EU data zone; ignored by models that do not offer it."
+                      }
                     }
                   },
                   "variables": {
@@ -865,40 +904,41 @@
                         "format": "Anthropic",
                         "name": "claude-opus-4-7",
                         "version": "1",
-                        "sku": "GlobalStandard",
+                        "dataZoneCapable": false,
                         "maxCapacity": 40
                       },
                       "gpt-5.5": {
                         "format": "OpenAI",
                         "name": "gpt-5.5",
                         "version": "2026-04-24",
-                        "sku": "GlobalStandard",
+                        "dataZoneCapable": true,
                         "maxCapacity": 1000
                       },
                       "mistral-large-3": {
                         "format": "Mistral AI",
                         "name": "Mistral-Large-3",
                         "version": "1",
-                        "sku": "GlobalStandard",
+                        "dataZoneCapable": true,
                         "maxCapacity": 20
                       },
                       "deepseek-v3.2": {
                         "format": "DeepSeek",
                         "name": "DeepSeek-V3.2",
                         "version": "1",
-                        "sku": "GlobalStandard",
+                        "dataZoneCapable": false,
                         "maxCapacity": 20
                       },
                       "gpt-5.4-nano": {
                         "format": "OpenAI",
                         "name": "gpt-5.4-nano",
                         "version": "2026-03-17",
-                        "sku": "GlobalStandard",
+                        "dataZoneCapable": true,
                         "maxCapacity": 5000
                       }
                     },
                     "p": "[variables('profiles')[parameters('modelProfile')]]",
-                    "effectiveCapacity": "[min(parameters('modelCapacity'), variables('p').maxCapacity)]"
+                    "effectiveCapacity": "[min(parameters('modelCapacity'), variables('p').maxCapacity)]",
+                    "effectiveSku": "[if(and(equals(parameters('modelDeploymentType'), 'DataZoneStandard'), variables('p').dataZoneCapable), 'DataZoneStandard', 'GlobalStandard')]"
                   },
                   "resources": [
                     {
@@ -924,7 +964,7 @@
                       "apiVersion": "2026-05-15-preview",
                       "name": "[format('{0}/{1}', format('aif-{0}', parameters('nameSuffix')), variables('p').name)]",
                       "sku": {
-                        "name": "[variables('p').sku]",
+                        "name": "[variables('effectiveSku')]",
                         "capacity": "[variables('effectiveCapacity')]"
                       },
                       "properties": "[if(equals(variables('p').format, 'Anthropic'), createObject('model', createObject('format', variables('p').format, 'name', variables('p').name, 'version', variables('p').version), 'modelProviderData', createObject('industry', parameters('industry'), 'organizationName', parameters('organizationName'), 'countryCode', parameters('countryCode'))), createObject('model', createObject('format', variables('p').format, 'name', variables('p').name, 'version', variables('p').version)))]",
@@ -954,9 +994,13 @@
                       "type": "string",
                       "value": "[variables('p').format]"
                     },
+                    "deploymentType": {
+                      "type": "string",
+                      "value": "[variables('effectiveSku')]"
+                    },
                     "modelLabel": {
                       "type": "string",
-                      "value": "[format('{0} {1}@{2} ({3})', variables('p').format, variables('p').name, variables('p').version, variables('p').sku)]"
+                      "value": "[format('{0} {1}@{2} ({3})', variables('p').format, variables('p').name, variables('p').version, variables('effectiveSku'))]"
                     }
                   }
                 }
@@ -983,6 +1027,10 @@
             "modelLabel": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.modelLabel.value]"
+            },
+            "modelDeploymentType": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Resources/deployments', format('llm-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.deploymentType.value]"
             },
             "authIdentityClientId": {
               "type": "string",
@@ -1020,6 +1068,10 @@
     "modelLabel": {
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', format('core-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.modelLabel.value]"
+    },
+    "modelDeploymentType": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', format('core-{0}', parameters('nameSuffix'))), '2025-04-01').outputs.modelDeploymentType.value]"
     },
     "authIdentityClientId": {
       "type": "string",
