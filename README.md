@@ -63,7 +63,40 @@ For the Entra option a tenant administrator does a one-time setup:
 **During deploy**
 3. On the **Access** tab choose **Require Microsoft Entra ID sign-in** and paste the Application (client) ID. Leave the tenant ID empty to use the deployment tenant.
 
-**After deploy (once)** - trust the app's managed identity so no secret is needed. Use the deployment outputs `authFederationIssuer` and `authIdentityPrincipalId`:
+**After deploy (once) - required.** The app deliberately has no client secret; this
+federated credential replaces it. **Without this step every sign-in fails.**
+
+First read the two values from the deployment. In the portal they are on the
+deployment's **Outputs** tab; from a shell you can derive them from the
+`nameSuffix` you deployed with:
+
+```powershell
+$suffix    = "<nameSuffix>"
+$issuer    = "https://login.microsoftonline.com/$(az account show --query tenantId -o tsv)/v2.0"
+$principal = az identity show -g "rg-logiccheck-$suffix" -n "id-auth-$suffix" --query principalId -o tsv
+```
+
+`$issuer` is the `authFederationIssuer` output, `$principal` the
+`authIdentityPrincipalId` output - the **object (principal) ID of the managed
+identity**, not a client ID. Then register the credential. On Windows, write the
+JSON to a file rather than passing it inline; `az` is a batch file there and
+mangles embedded quotes:
+
+```powershell
+@{
+  name      = "inconsistency-check"
+  issuer    = $issuer
+  subject   = $principal
+  audiences = @("api://AzureADTokenExchange")
+} | ConvertTo-Json | Set-Content fic.json -Encoding utf8
+
+az ad app federated-credential create --id <application-client-id> --parameters "@fic.json"
+Remove-Item fic.json
+```
+
+The quotes around `"@fic.json"` are required - unquoted, PowerShell reads a
+leading `@` as the splatting operator.
+
 ```bash
 az ad app federated-credential create --id <application-client-id> --parameters '{
   "name": "inconsistency-check",
@@ -72,7 +105,18 @@ az ad app federated-credential create --id <application-client-id> --parameters 
   "audiences": ["api://AzureADTokenExchange"]
 }'
 ```
+
 Nothing expires afterwards. Access to the model stays keyless either way; this gate only controls who may open the app.
+
+**If sign-in fails.** A generic error page after signing in almost always means the
+federated credential above is missing or its `subject` is wrong. Check the Function
+App's authentication logs (*Monitoring -> Log stream*) for an `AADSTS` error stating
+that the client credential could not be validated. The application itself is
+unaffected - none of its code has run at that point.
+
+Optionally, set **Assignment required** under *Enterprise applications -> Properties*
+to limit the app to assigned users or groups. Otherwise anyone in the tenant can
+sign in.
 
 ## Workflow integration ("AI at the cursor")
 The frontend is built for hands-free use from other software (e.g. speech-recognition / dictation tools):
@@ -96,6 +140,32 @@ window.open(
 
 A native clinical application or managed WebView should control the window size
 itself and load the same `?compact=1` URL.
+
+### Voice-driven from a dictation system
+Speech-recognition software with scripted commands (e.g. Dragon Medical One
+*Step-by-Step Commands*) can run the whole check from a single utterance. Define a
+command such as *"inconsistency check"* with these steps:
+
+| Step | Action |
+|---|---|
+| 1 | `Ctrl + C` - copy the text selected in the clinical system |
+| 2 | Wait 500 ms |
+| 3 | Launch application: `https://func-lc-<nameSuffix>.azurewebsites.net/?compact=1` |
+| 4 | Wait 1000 ms |
+| 5 | `Ctrl + V` - paste, which starts the check automatically |
+
+The clinician selects a passage, says the command, and the findings appear in the
+companion window.
+
+**The URL on its own is sufficient** - no executable has to be specified. It opens
+in the workstation's default browser. Name a browser executable only if the check
+should deliberately open somewhere other than the default browser.
+
+With Microsoft Entra ID sign-in enabled, the first run of the command asks for
+sign-in once; later runs reuse the existing session.
+
+The waits give the clipboard and the browser time to settle; increase them on
+slower workstations.
 
 ## Architecture (keyless by design)
 - **Managed Identity + RBAC** for every model call - the Function App's managed identity holds *Cognitive Services OpenAI User* and *Cognitive Services User* on the Foundry account (assigned in Bicep). No API keys, no Key Vault, no SQL.
